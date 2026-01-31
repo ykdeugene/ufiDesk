@@ -1,13 +1,14 @@
+import { Login } from "~/login/login-page";
 import type { Route } from "./+types/home";
-import { Welcome } from "../welcome/welcome";
+import { UserManagementPage } from "~/admin/user-management-page";
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "New React Router App" },
-    { name: "description", content: "Welcome to React Router!" },
+    { title: "UfiDesk" },
+    { name: "UfiDesk FE", content: "Hot Desk Booking and Administration" },
   ];
 }
 
 export default function Home() {
-  return <Welcome />;
+  return <Login />;
 }
