@@ -1,6 +1,5 @@
-import { Login } from "~/login/login-page";
 import type { Route } from "./+types/home";
-import { UserManagementPage } from "~/admin/user-management-page";
+import { redirect } from "react-router";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -9,6 +8,10 @@ export function meta({}: Route.MetaArgs) {
   ];
 }
 
+export function loader() {
+  return redirect("/login");
+}
+
 export default function Home() {
-  return <Login />;
+  return null;
 }

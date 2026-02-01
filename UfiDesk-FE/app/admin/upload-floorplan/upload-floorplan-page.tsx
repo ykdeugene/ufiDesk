@@ -2,9 +2,8 @@ import { useFloorplanHistory } from "./hooks/useFloorplanHistory";
 import { useFloorplanGrid } from "./hooks/useFloorplanGrid";
 import { useDragAndDrop } from "./hooks/useDragAndDrop";
 import { usePaintMode } from "./hooks/usePaintMode";
-import { FloorplanControls } from "./components/FloorplanControls";
-import { DeskTemplates } from "./components/DeskTemplates";
 import { FloorplanGrid } from "./components/FloorplanGrid";
+import { FloorplanToolbar } from "./components/FloorplanToolbar";
 import {
   exportFloorplanToCSV,
   importFloorplanFromCSV,
@@ -109,32 +108,23 @@ export function UploadFloorplanPage() {
           Edit Office Floorplan
         </h1>
 
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <div className="flex gap-6">
-            <FloorplanControls
-              xLength={xLength}
-              yLength={yLength}
-              historyIndex={historyIndex}
-              onXLengthChange={handleXLengthChange}
-              onYLengthChange={handleYLengthChange}
-              onUndo={handleUndoClick}
-              onClearAll={handleClearAll}
-            />
-
-            <div className="w-px bg-gray-300" />
-
-            <DeskTemplates
-              deskTemplates={deskTemplates}
-              deskTemplatesNoMonitor={deskTemplatesNoMonitor}
-              standingDeskTemplates={standingDeskTemplates}
-              standingDeskTemplatesNoMonitor={standingDeskTemplatesNoMonitor}
-              onDragStart={handleDragStart}
-              onSave={handleSave}
-              onDownload={handleDownload}
-              onUpload={handleUpload}
-            />
-          </div>
-        </div>
+        <FloorplanToolbar
+          xLength={xLength}
+          yLength={yLength}
+          historyIndex={historyIndex}
+          deskTemplates={deskTemplates}
+          deskTemplatesNoMonitor={deskTemplatesNoMonitor}
+          standingDeskTemplates={standingDeskTemplates}
+          standingDeskTemplatesNoMonitor={standingDeskTemplatesNoMonitor}
+          onXLengthChange={handleXLengthChange}
+          onYLengthChange={handleYLengthChange}
+          onUndo={handleUndoClick}
+          onClearAll={handleClearAll}
+          onDragStart={handleDragStart}
+          onSave={handleSave}
+          onDownload={handleDownload}
+          onUpload={handleUpload}
+        />
 
         <FloorplanGrid
           grid={grid}
