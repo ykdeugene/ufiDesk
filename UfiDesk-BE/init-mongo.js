@@ -25,13 +25,14 @@ db.SPRING_SESSION.createIndex({ "expireAtTime": 1 }, { expireAfterSeconds: 0 });
 db.SPRING_SESSION_ATTRIBUTES.createIndex({ "sessionId": 1 });
 
 // Insert superadmin user with BCrypt hashed password for "password"
-// BCrypt hash of "password": $2a$10$s0tM/w9pKJY3KjJ3lGKkpe8Mk1f1RVxfI0EYRzQzXl/xvkAFaKLZG
+// BCrypt hash of "password": $2a$12$GIkjT97dU7JnJkAGnjzDF.o94Q0yOIPIBsvzOiwZrPb1V7DavXUTS
 // Generated using BCrypt with salt rounds = 10
 db.users.insertOne({
     "_id": ObjectId(),
     "email": "superadmin@ufidesk.com",
-    "passwordHash": "$2a$10$s0tM/w9pKJY3KjJ3lGKkpe8Mk1f1RVxfI0EYRzQzXl/xvkAFaKLZG",
+    "passwordHash": "$2a$12$GIkjT97dU7JnJkAGnjzDF.o94Q0yOIPIBsvzOiwZrPb1V7DavXUTS",
     "role": "SUPERADMIN",
+    "admin": true,
     "enabled": true,
     "createdAt": new Date(),
     "lastLogin": null,

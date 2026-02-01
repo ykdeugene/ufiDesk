@@ -37,8 +37,9 @@ db.SPRING_SESSION_ATTRIBUTES.createIndex({ "sessionId": 1 });
 db.users.insertOne({
     "_id": ObjectId(),
     "email": "superadmin@ufidesk.com",
-    "passwordHash": "`$2a`$10`$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy",
+    "passwordHash": "`$2a$12$GIkjT97dU7JnJkAGnjzDF.o94Q0yOIPIBsvzOiwZrPb1V7DavXUTS",
     "role": "SUPERADMIN",
+    "admin": true,
     "enabled": true,
     "createdAt": new Date(),
     "lastLogin": null,

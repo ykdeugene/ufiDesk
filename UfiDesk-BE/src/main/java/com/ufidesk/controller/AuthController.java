@@ -4,6 +4,7 @@ import com.ufidesk.dto.ApiResponse;
 import com.ufidesk.dto.LoginRequest;
 import com.ufidesk.dto.LoginResponse;
 import com.ufidesk.model.User;
+import com.ufidesk.security.CustomUserDetails;
 import com.ufidesk.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -12,6 +13,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Optional;
@@ -66,13 +72,37 @@ public class AuthController {
         // Password is valid - handle successful login
         userService.handleSuccessfulLogin(user);
 
-        // Create session
+        // Check if account is locked
+        boolean accountLocked = user.getAccountLockedUntil() != null &&
+                java.time.LocalDateTime.now().isBefore(user.getAccountLockedUntil());
+
+        // Set up Spring Security authentication context with individual user fields
+        CustomUserDetails userDetails = new CustomUserDetails(
+                user.getId(),
+                user.getEmail(),
+                user.getPasswordHash(),
+                user.getRole(),
+                user.isEnabled(),
+                user.isAdmin(),
+                accountLocked
+        );
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                userDetails, null, userDetails.getAuthorities());
+
+        SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
+        securityContext.setAuthentication(authentication);
+        SecurityContextHolder.setContext(securityContext);
+
+        // Create session with security context
         HttpSession session = request.getSession(true);
         session.setAttribute("userId", user.getId());
         session.setAttribute("email", user.getEmail());
         session.setAttribute("role", user.getRole());
-        
-        log.info("Login successful for user: {}", user.getEmail());
+        session.setAttribute("admin", user.isAdmin());
+        session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, securityContext);
+
+        log.info("✅ Login successful for user: {} (role: {}, admin: {})",
+                user.getEmail(), user.getRole(), user.isAdmin());
 
         LoginResponse response = new LoginResponse(
                 user.getEmail(),

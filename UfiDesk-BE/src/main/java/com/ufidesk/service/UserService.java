@@ -2,7 +2,9 @@ package com.ufidesk.service;
 
 import com.ufidesk.model.User;
 import com.ufidesk.repository.UserRepository;
+import com.ufidesk.security.EncryptionUtils;
 import com.ufidesk.security.SecurityUtils;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -88,16 +90,16 @@ public class UserService {
     public boolean validateEncryptedPassword(User user, String encryptedPassword, String email, String loginTime) {
       try {
         // Decrypt the password to get plaintext
-        String decryptedPassword = com.ufidesk.security.EncryptionUtils.decryptPassword(
+        String decryptedPassword = EncryptionUtils.decryptPassword(
             encryptedPassword, email, loginTime);
 
 
         // **TEMPORARY: Generate and log the BCrypt hash for DB storage**
         // Remove this in production!
-//        log.debug("Decrypted password for user {}: {}", email, decryptedPassword);
-//        String generatedHash = passwordEncoder.encode(decryptedPassword);
-//        log.debug("HASH_FOR_DB - User {}: {}", email, generatedHash);
-//        log.debug("Copy this hash to your MongoDB setup script ^^^");
+        log.debug("Decrypted password for user {}: {}", email, decryptedPassword);
+        String generatedHash = passwordEncoder.encode(decryptedPassword);
+        log.debug("HASH_FOR_DB - User {}: {}", email, generatedHash);
+        log.debug("Copy this hash to your MongoDB setup script ^^^");
 
         // Validate decrypted plaintext password against stored BCrypt hash
         boolean isValid = passwordEncoder.matches(decryptedPassword, user.getPasswordHash());
@@ -231,5 +233,31 @@ public class UserService {
     public void updateLastLogin(User user) {
         user.setLastLogin(LocalDateTime.now());
         userRepository.save(user);
+    }
+
+    /**
+     * Get all users from the database
+     * @return List of all users
+     */
+    public List<User> getAllUsers() {
+        return userRepository.findAll();
+    }
+
+    /**
+     * Hash a plaintext password using BCrypt
+     * @param plainPassword the plaintext password to hash
+     * @return the BCrypt hashed password
+     */
+    public String hashPassword(String plainPassword) {
+        return passwordEncoder.encode(plainPassword);
+    }
+
+    /**
+     * Save a user to the database
+     * @param user the user to save
+     * @return the saved user
+     */
+    public User saveUser(User user) {
+        return userRepository.save(user);
     }
 }

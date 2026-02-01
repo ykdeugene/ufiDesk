@@ -2,10 +2,16 @@ package com.ufidesk.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer.FrameOptionsConfig;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -20,6 +26,7 @@ import java.util.Arrays;
  *
  * Security features:
  * - BCrypt password hashing with strength 12
+ * - Method-level security with @PreAuthorize
  * - Session management with 1 concurrent session limit
  * - Security headers (X-Content-Type-Options, X-Frame-Options, etc.)
  * - CORS configuration with credentials support for cookies
@@ -27,8 +34,9 @@ import java.util.Arrays;
  */
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
-    
+
     /**
      * Password encoder using BCrypt with strength 12 (default).
      * This is industry standard and recommended by NIST.
@@ -39,7 +47,36 @@ public class SecurityConfig {
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder(12);
     }
-    
+
+    /**
+     * AuthenticationProvider using UserDetailsService and PasswordEncoder.
+     * This is required for Spring Security to authenticate users.
+     *
+     * @param userDetailsService the custom UserDetailsService
+     * @param passwordEncoder the BCrypt password encoder
+     * @return configured DaoAuthenticationProvider
+     */
+    @Bean
+    public AuthenticationProvider authenticationProvider(UserDetailsService userDetailsService, PasswordEncoder passwordEncoder) {
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+        provider.setUserDetailsService(userDetailsService);
+        provider.setPasswordEncoder(passwordEncoder);
+        return provider;
+    }
+
+    /**
+     * AuthenticationManager bean for manual authentication.
+     * Required for session-based authentication.
+     *
+     * @param config AuthenticationConfiguration
+     * @return AuthenticationManager
+     * @throws Exception if authentication manager creation fails
+     */
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
+    }
+
     /**
      * Main security filter chain configuration.
      *
@@ -74,9 +111,11 @@ public class SecurityConfig {
             )
             // Session management - prevent session fixation and concurrency issues
             .sessionManagement(session -> session
-                .maximumSessions(1) // Only 1 concurrent session per user
-                .maxSessionsPreventsLogin(false) // New login invalidates old session
-                .expiredUrl("/auth/login")
+                .sessionConcurrency(concurrency -> concurrency
+                    .maximumSessions(1) // Only 1 concurrent session per user
+                    .maxSessionsPreventsLogin(false) // New login invalidates old session
+                )
+                .invalidSessionUrl("/auth/login")
             )
             // Handle authentication errors
             .exceptionHandling(exception -> exception

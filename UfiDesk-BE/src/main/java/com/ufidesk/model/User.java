@@ -27,6 +27,8 @@ public class User {
     
     private boolean enabled;
     
+    private boolean admin; // Track if user is admin
+
     private LocalDateTime createdAt;
     
     private LocalDateTime lastLogin;
