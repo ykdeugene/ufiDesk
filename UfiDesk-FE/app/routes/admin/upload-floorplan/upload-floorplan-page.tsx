@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { useUploadFloorplan } from "~/api/hooks";
 import { FloorplanGrid } from "./components/FloorplanGrid";
 import { FloorplanToolbar } from "./components/FloorplanToolbar";
 import {
@@ -20,6 +21,10 @@ import {
 
 export function UploadFloorplanPage() {
   const [isUploading, setIsUploading] = useState(false);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [floorplanName, setFloorplanName] = useState("");
+
+  const uploadFloorplan = useUploadFloorplan();
 
   const { historyIndex, saveToHistory, handleUndo, applyUndo } =
     useFloorplanHistory();
@@ -47,8 +52,92 @@ export function UploadFloorplanPage() {
   } = usePaintMode(grid, setGrid, xLength, yLength, saveToHistory);
 
   const handleSave = () => {
-    console.log("Saving floorplan:", grid);
-    toast.success("Floorplan saved successfully!");
+    // Check if floorplan is empty before opening modal
+    const hasDesks = grid.some((row) => row.some((cell) => cell !== null));
+
+    if (!hasDesks) {
+      toast.error("Cannot save an empty floorplan");
+      return;
+    }
+
+    setShowSaveModal(true);
+  };
+
+  const handleSaveConfirm = () => {
+    if (!floorplanName.trim()) {
+      toast.error("Please enter a floor plan name");
+      return;
+    }
+
+    // Collect all desks from the grid (top to bottom, left to right)
+    const desks: Array<{
+      id: string;
+      x: number;
+      y: number;
+      hasMonitor: boolean;
+      direction: "up" | "down" | "left" | "right";
+      type: "regular" | "standing";
+    }> = [];
+    let counter = 1;
+
+    for (let y = 0; y < yLength; y++) {
+      for (let x = 0; x < xLength; x++) {
+        const cell = grid[y][x];
+        if (cell !== null) {
+          // Determine prefix based on type and monitor
+          let prefix = "";
+          if (cell.type === "regular") {
+            prefix = cell.hasMonitor ? "RT-" : "RS-";
+          } else if (cell.type === "standing") {
+            prefix = cell.hasMonitor ? "ST-" : "SS-";
+          }
+
+          desks.push({
+            id: `${prefix}${counter}`,
+            x: cell.x,
+            y: cell.y,
+            hasMonitor: cell.hasMonitor,
+            direction: cell.direction,
+            type: cell.type,
+          });
+
+          counter++;
+        }
+      }
+    }
+
+    // Check if floorplan is empty
+    if (desks.length === 0) {
+      toast.error("Cannot save an empty floorplan");
+      return;
+    }
+
+    // Upload the floorplan
+    uploadFloorplan.mutate(
+      {
+        name: floorplanName,
+        xLength,
+        yLength,
+        desks,
+      },
+      {
+        onSuccess: () => {
+          toast.success(`Floor plan "${floorplanName}" saved successfully!`);
+          setShowSaveModal(false);
+          setFloorplanName("");
+        },
+        onError: (error) => {
+          toast.error(
+            error instanceof Error ? error.message : "Failed to save floorplan",
+          );
+        },
+      },
+    );
+  };
+
+  const handleSaveCancel = () => {
+    setShowSaveModal(false);
+    setFloorplanName("");
   };
 
   const handleDownload = () => {
@@ -99,6 +188,47 @@ export function UploadFloorplanPage() {
           <div className="flex flex-col items-center gap-3">
             <div className="w-8 h-8 border-2 border-gray-600 border-t-transparent rounded-full animate-spin"></div>
             <p className="text-sm text-gray-700">Uploading...</p>
+          </div>
+        </div>
+      )}
+
+      {showSaveModal && (
+        <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+            <h2 className="text-xl font-semibold text-gray-800 mb-4">
+              Save Floor Plan
+            </h2>
+            <div className="mb-6">
+              <label
+                htmlFor="floorplan-name"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Floor Plan Name
+              </label>
+              <input
+                id="floorplan-name"
+                type="text"
+                value={floorplanName}
+                onChange={(e) => setFloorplanName(e.target.value)}
+                placeholder="Enter floor plan name"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
+                autoFocus
+              />
+            </div>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={handleSaveCancel}
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveConfirm}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              >
+                Save
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -6,3 +6,8 @@ export {
   useUpdateUser,
   adminKeys,
 } from "./useAdmin";
+export {
+  useGetFloorplan,
+  useUploadFloorplan,
+  floorplanKeys,
+} from "./useFloorplan";
