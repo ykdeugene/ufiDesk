@@ -1,5 +1,6 @@
 package com.ufidesk.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -18,12 +19,16 @@ public class Floorplan {
     @Id
     private String id;
 
+    @JsonProperty("name")
     private String name;
 
+    @JsonProperty("xLength")
     private int xLength;
 
+    @JsonProperty("yLength")
     private int yLength;
 
+    @JsonProperty("desks")
     private List<Desk> desks;
 
     private LocalDateTime createdAt;

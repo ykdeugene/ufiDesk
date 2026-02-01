@@ -32,6 +32,7 @@ public class FloorplanService {
      */
     public Floorplan saveFloorplan(Floorplan floorplan) {
         log.info("Saving floorplan: {}", floorplan.getName());
+        log.info("📐 Floorplan dimensions - xLength: {}, yLength: {}", floorplan.getXLength(), floorplan.getYLength());
 
         // Generate ID if not present
         if (floorplan.getId() == null || floorplan.getId().isEmpty() || floorplan.getId().equals("temp-id")) {
@@ -45,6 +46,7 @@ public class FloorplanService {
 
         Floorplan saved = floorplanRepository.save(floorplan);
         log.info("✅ Floorplan saved successfully with ID: {}", saved.getId());
+        log.info("📐 Saved floorplan dimensions - xLength: {}, yLength: {}", saved.getXLength(), saved.getYLength());
 
         return saved;
     }

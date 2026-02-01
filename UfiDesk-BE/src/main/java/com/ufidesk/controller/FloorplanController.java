@@ -39,6 +39,8 @@ public class FloorplanController {
     @PostMapping("/upload")
     public ResponseEntity<ApiResponse<Floorplan>> uploadFloorplan(@RequestBody Floorplan floorplan) {
         log.info("Attempting to upload floorplan: {}", floorplan.getName());
+        log.info("📐 Received floorplan dimensions - xLength: {}, yLength: {}", floorplan.getXLength(), floorplan.getYLength());
+        log.info("🏢 Received floorplan data: {}", floorplan);
 
         try {
             Floorplan savedFloorplan = floorplanService.saveFloorplan(floorplan);
