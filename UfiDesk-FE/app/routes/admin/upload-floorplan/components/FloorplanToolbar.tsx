@@ -1,6 +1,12 @@
+import { useForm, useFormContext, type UseFormRegister } from "react-hook-form";
 import type { TemplateDesk } from "../types/floorplan.types";
 import { RegularDeskIcon } from "./RegularDesk";
 import { StandingDeskIcon } from "./StandingDesk";
+
+interface FloorplanFormData {
+  xLength: number;
+  yLength: number;
+}
 
 interface FloorplanToolbarProps {
   xLength: number;
@@ -37,6 +43,7 @@ export function FloorplanToolbar({
   onDownload,
   onUpload,
 }: FloorplanToolbarProps) {
+  const { register } = useFormContext();
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -64,8 +71,11 @@ export function FloorplanToolbar({
                 id="xLength"
                 min="1"
                 max="20"
-                value={xLength}
-                onChange={(e) => onXLengthChange(parseInt(e.target.value) || 1)}
+                {...register("xLength", {
+                  valueAsNumber: true,
+                  onChange: (e) =>
+                    onXLengthChange(parseInt(e.target.value) || 1),
+                })}
                 className="w-20 px-3 py-2 text-gray-900 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -81,8 +91,11 @@ export function FloorplanToolbar({
                 id="yLength"
                 min="1"
                 max="20"
-                value={yLength}
-                onChange={(e) => onYLengthChange(parseInt(e.target.value) || 1)}
+                {...register("yLength", {
+                  valueAsNumber: true,
+                  onChange: (e) =>
+                    onYLengthChange(parseInt(e.target.value) || 1),
+                })}
                 className="w-20 px-3 py-2 text-gray-900 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -91,6 +104,7 @@ export function FloorplanToolbar({
           {/* Row 2: Action Buttons */}
           <div className="flex gap-2">
             <button
+              type="button"
               onClick={onUndo}
               disabled={historyIndex <= 0}
               className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
@@ -98,6 +112,7 @@ export function FloorplanToolbar({
               Undo
             </button>
             <button
+              type="button"
               onClick={onClearAll}
               className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded hover:bg-gray-50 transition-colors"
             >
@@ -218,6 +233,7 @@ export function FloorplanToolbar({
         {/* Column 3: Action Buttons */}
         <div className="flex flex-col gap-2">
           <button
+            type="button"
             onClick={onSave}
             className="px-6 py-2 text-sm text-gray-700 border border-gray-300 rounded hover:bg-gray-50 transition-colors font-medium flex items-center gap-2"
           >
@@ -239,6 +255,7 @@ export function FloorplanToolbar({
             Save Floorplan
           </button>
           <button
+            type="button"
             onClick={onDownload}
             className="px-6 py-2 text-sm text-gray-700 border border-gray-300 rounded hover:bg-gray-50 transition-colors font-medium flex items-center gap-2"
           >
@@ -260,6 +277,7 @@ export function FloorplanToolbar({
             Download CSV
           </button>
           <button
+            type="button"
             onClick={() => document.getElementById("csv-upload")?.click()}
             className="px-6 py-2 text-sm text-gray-700 border border-gray-300 rounded hover:bg-gray-50 transition-colors font-medium flex items-center gap-2"
           >

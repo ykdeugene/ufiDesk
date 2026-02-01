@@ -20,9 +20,11 @@ export interface Desk {
 export interface Floorplan {
   id: string;
   name: string;
-  xLength: number;
-  yLength: number;
+  xlength: number;
+  ylength: number;
   desks: Desk[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface UploadFloorplanRequest {
@@ -40,7 +42,7 @@ export function useGetFloorplan() {
   return useQuery({
     queryKey: floorplanKeys.list(),
     queryFn: async () => {
-      const response = await apiClient.get<Floorplan>(
+      const response = await apiClient.get<Floorplan[]>(
         "/floorplan/get-floorplan",
       );
 

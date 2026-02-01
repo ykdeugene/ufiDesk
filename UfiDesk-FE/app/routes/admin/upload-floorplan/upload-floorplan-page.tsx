@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { useUploadFloorplan } from "~/api/hooks";
+import { useGetFloorplan, useUploadFloorplan } from "~/api/hooks";
 import { FloorplanGrid } from "./components/FloorplanGrid";
 import { FloorplanToolbar } from "./components/FloorplanToolbar";
 import {
@@ -18,13 +18,45 @@ import {
   exportFloorplanToCSV,
   importFloorplanFromCSV,
 } from "./utils/floorplan-utils";
+import type { DeskType, Direction } from "./types/deskiunfo.types";
+import { FormProvider, useForm } from "react-hook-form";
+import { Form } from "react-router";
+
+type FloorplanFormData = {
+  xLength: number;
+  yLength: number;
+  floorplanName: string;
+  desks: {
+    id: string;
+    x: number;
+    y: number;
+    hasMonitor: boolean;
+    direction: Direction;
+    type: DeskType;
+  }[];
+};
 
 export function UploadFloorplanPage() {
+  const uploadFloorplanForm = useForm<FloorplanFormData>({
+    mode: "onChange",
+    defaultValues: {
+      xLength: 10,
+      yLength: 10,
+      floorplanName: "",
+      desks: [],
+    },
+  });
+
   const [isUploading, setIsUploading] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
-  const [floorplanName, setFloorplanName] = useState("");
+  const [selectedFloorplanId, setSelectedFloorplanId] = useState<string>("");
 
   const uploadFloorplan = useUploadFloorplan();
+  const {
+    data: allFloorplans,
+    isLoading: isLoadingFloorplans,
+    refetch: refetchFloorplans,
+  } = useGetFloorplan();
 
   const { historyIndex, saveToHistory, handleUndo, applyUndo } =
     useFloorplanHistory();
@@ -51,6 +83,42 @@ export function UploadFloorplanPage() {
     handleClearCell,
   } = usePaintMode(grid, setGrid, xLength, yLength, saveToHistory);
 
+  // Load floorplan when selection changes
+  useEffect(() => {
+    if (!selectedFloorplanId || !allFloorplans) return;
+
+    const selectedFloorplan = allFloorplans.find(
+      (fp) => fp.id === selectedFloorplanId,
+    );
+
+    if (!selectedFloorplan) return;
+
+    // Use current grid dimensions from FloorplanToolbar inputs (xLength, yLength)
+    // Create empty grid with current dimensions
+    const newGrid: typeof grid = Array.from({ length: yLength }, () =>
+      Array(xLength).fill(null),
+    );
+
+    // Place desks in the grid at their coordinates
+    selectedFloorplan.desks.forEach((desk) => {
+      if (desk.y < yLength && desk.x < xLength) {
+        newGrid[desk.y][desk.x] = {
+          id: desk.id,
+          x: desk.x,
+          y: desk.y,
+          hasMonitor: desk.hasMonitor,
+          direction: desk.direction as Direction,
+          type: desk.type as DeskType,
+        };
+      }
+    });
+
+    // Update grid state without changing dimensions
+    setGrid(newGrid);
+    saveToHistory(newGrid, xLength, yLength);
+    toast.success(`Loaded floorplan: ${selectedFloorplan.name}`);
+  }, [selectedFloorplanId, allFloorplans, xLength, yLength]);
+
   const handleSave = () => {
     // Check if floorplan is empty before opening modal
     const hasDesks = grid.some((row) => row.some((cell) => cell !== null));
@@ -63,11 +131,13 @@ export function UploadFloorplanPage() {
     setShowSaveModal(true);
   };
 
-  const handleSaveConfirm = () => {
-    if (!floorplanName.trim()) {
+  const handleSaveConfirm = (data: FloorplanFormData) => {
+    if (!data.floorplanName.trim()) {
       toast.error("Please enter a floor plan name");
       return;
     }
+
+    console.log(data);
 
     // Collect all desks from the grid (top to bottom, left to right)
     const desks: Array<{
@@ -111,33 +181,38 @@ export function UploadFloorplanPage() {
       toast.error("Cannot save an empty floorplan");
       return;
     }
+    const payload = {
+      name: data.floorplanName,
+      xLength: data.xLength,
+      yLength: data.yLength,
+      desks,
+    };
+
+    console.log("Payload for upload:", payload);
 
     // Upload the floorplan
-    uploadFloorplan.mutate(
-      {
-        name: floorplanName,
-        xLength,
-        yLength,
-        desks,
+    uploadFloorplan.mutate(payload, {
+      onSuccess: () => {
+        toast.success(`Floor plan "${data.floorplanName}" saved successfully!`);
+        setShowSaveModal(false);
+        uploadFloorplanForm.reset({
+          xLength: data.xLength,
+          yLength: data.yLength,
+          floorplanName: "",
+        });
+        refetchFloorplans;
       },
-      {
-        onSuccess: () => {
-          toast.success(`Floor plan "${floorplanName}" saved successfully!`);
-          setShowSaveModal(false);
-          setFloorplanName("");
-        },
-        onError: (error) => {
-          toast.error(
-            error instanceof Error ? error.message : "Failed to save floorplan",
-          );
-        },
+      onError: (error) => {
+        toast.error(
+          error instanceof Error ? error.message : "Failed to save floorplan",
+        );
       },
-    );
+    });
   };
 
   const handleSaveCancel = () => {
     setShowSaveModal(false);
-    setFloorplanName("");
+    uploadFloorplanForm.reset({ xLength, yLength, floorplanName: "" });
   };
 
   const handleDownload = () => {
@@ -182,93 +257,126 @@ export function UploadFloorplanPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 p-8">
-      {isUploading && (
-        <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="flex flex-col items-center gap-3">
-            <div className="w-8 h-8 border-2 border-gray-600 border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-sm text-gray-700">Uploading...</p>
+    <FormProvider {...uploadFloorplanForm}>
+      <form onSubmit={uploadFloorplanForm.handleSubmit(handleSaveConfirm)}>
+        <div className="min-h-screen bg-gray-100 p-8">
+          {isUploading && (
+            <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50">
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-8 h-8 border-2 border-gray-600 border-t-transparent rounded-full animate-spin"></div>
+                <p className="text-sm text-gray-700">Uploading...</p>
+              </div>
+            </div>
+          )}
+
+          {showSaveModal && (
+            <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50">
+              <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+                <h2 className="text-xl font-semibold text-gray-800 mb-4">
+                  Save Floor Plan
+                </h2>
+                <div className="mb-6">
+                  <label
+                    htmlFor="floorplan-name"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
+                    Floor Plan Name
+                  </label>
+                  <input
+                    id="floorplan-name"
+                    type="text"
+                    {...uploadFloorplanForm.register("floorplanName", {
+                      required: true,
+                    })}
+                    placeholder="Enter floor plan name"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
+                    autoFocus
+                  />
+                </div>
+                <div className="flex gap-3 justify-end">
+                  <button
+                    type="button"
+                    onClick={handleSaveCancel}
+                    className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="max-w-7xl mx-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h1 className="text-3xl font-bold text-gray-800">
+                Edit Office Floorplan
+              </h1>
+              <div className="flex items-center gap-3">
+                <label
+                  htmlFor="floorplan-select"
+                  className="text-sm font-medium text-gray-700"
+                >
+                  Load Floorplan:
+                </label>
+                <select
+                  id="floorplan-select"
+                  value={selectedFloorplanId}
+                  onChange={(e) => {
+                    console.log(e.target.value);
+                    setSelectedFloorplanId(e.target.value);
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white min-w-[200px]"
+                  disabled={isLoadingFloorplans}
+                >
+                  <option value="">Select a floorplan</option>
+                  {allFloorplans?.map((floorplan) => (
+                    <option key={floorplan.id} value={floorplan.id}>
+                      {floorplan.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <FloorplanToolbar
+              xLength={xLength}
+              yLength={yLength}
+              historyIndex={historyIndex}
+              deskTemplates={deskTemplates}
+              deskTemplatesNoMonitor={deskTemplatesNoMonitor}
+              standingDeskTemplates={standingDeskTemplates}
+              standingDeskTemplatesNoMonitor={standingDeskTemplatesNoMonitor}
+              onXLengthChange={handleXLengthChange}
+              onYLengthChange={handleYLengthChange}
+              onUndo={handleUndoClick}
+              onClearAll={handleClearAll}
+              onDragStart={handleDragStart}
+              onSave={handleSave}
+              onDownload={handleDownload}
+              onUpload={handleUpload}
+            />
+
+            <FloorplanGrid
+              grid={grid}
+              xLength={xLength}
+              isPainting={isPainting}
+              onCellDragStart={handleCellDragStart}
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
+              onCellMouseDown={handleCellMouseDown}
+              onCellMouseEnter={handleCellMouseEnter}
+              onClearCell={handleClearCell}
+            />
           </div>
         </div>
-      )}
-
-      {showSaveModal && (
-        <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">
-              Save Floor Plan
-            </h2>
-            <div className="mb-6">
-              <label
-                htmlFor="floorplan-name"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                Floor Plan Name
-              </label>
-              <input
-                id="floorplan-name"
-                type="text"
-                value={floorplanName}
-                onChange={(e) => setFloorplanName(e.target.value)}
-                placeholder="Enter floor plan name"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
-                autoFocus
-              />
-            </div>
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={handleSaveCancel}
-                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSaveConfirm}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-              >
-                Save
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-800 mb-6">
-          Edit Office Floorplan
-        </h1>
-
-        <FloorplanToolbar
-          xLength={xLength}
-          yLength={yLength}
-          historyIndex={historyIndex}
-          deskTemplates={deskTemplates}
-          deskTemplatesNoMonitor={deskTemplatesNoMonitor}
-          standingDeskTemplates={standingDeskTemplates}
-          standingDeskTemplatesNoMonitor={standingDeskTemplatesNoMonitor}
-          onXLengthChange={handleXLengthChange}
-          onYLengthChange={handleYLengthChange}
-          onUndo={handleUndoClick}
-          onClearAll={handleClearAll}
-          onDragStart={handleDragStart}
-          onSave={handleSave}
-          onDownload={handleDownload}
-          onUpload={handleUpload}
-        />
-
-        <FloorplanGrid
-          grid={grid}
-          xLength={xLength}
-          isPainting={isPainting}
-          onCellDragStart={handleCellDragStart}
-          onDragOver={handleDragOver}
-          onDrop={handleDrop}
-          onCellMouseDown={handleCellMouseDown}
-          onCellMouseEnter={handleCellMouseEnter}
-          onClearCell={handleClearCell}
-        />
-      </div>
-    </div>
+      </form>
+    </FormProvider>
   );
 }
 
