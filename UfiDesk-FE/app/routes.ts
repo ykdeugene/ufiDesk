@@ -4,10 +4,15 @@ const adminPrefix = "admin/";
 
 export default [
   index("routes/home.tsx"),
-  route("login", "login/login-page.tsx"),
-  route(`${adminPrefix}user-management`, "admin/user-management-page.tsx"),
+  route("login", "routes/login/login-page.tsx"),
+  route(
+    `${adminPrefix}user-management`,
+    "routes/admin/user-management-page.tsx",
+  ),
   route(
     `${adminPrefix}upload-floorplan`,
-    "admin/upload-floorplan/upload-floorplan-page.tsx",
+    "routes/admin/upload-floorplan/upload-floorplan-page.tsx",
   ),
+  // Catch-all route for unmatched paths (must be last)
+  route("*", "routes/not-found.tsx"),
 ] satisfies RouteConfig;

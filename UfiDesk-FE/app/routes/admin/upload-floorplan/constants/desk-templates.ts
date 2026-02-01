@@ -1,7 +1,4 @@
-import {
-  Direction,
-  DeskType,
-} from "~/admin/upload-floorplan/types/deskiunfo.types";
+import { Direction, DeskType } from "../types/deskiunfo.types";
 import type { TemplateDesk } from "../types/floorplan.types";
 
 export const deskTemplates: TemplateDesk[] = [

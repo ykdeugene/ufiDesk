@@ -1,8 +1,4 @@
-import {
-  Direction,
-  type DeskInfo,
-  DeskType,
-} from "~/admin/upload-floorplan/types/deskiunfo.types";
+import type { DeskInfo, DeskType, Direction } from "./deskiunfo.types";
 
 export type HistoryState = {
   grid: (DeskInfo | null)[][];

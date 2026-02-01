@@ -1,13 +1,16 @@
 import { useNavigate } from "react-router";
 import { useForm } from "react-hook-form";
+import { useLogin } from "~/api/hooks";
+import { toast } from "react-toastify";
 
 interface LoginFormData {
-  username: string;
+  email: string;
   password: string;
 }
 
 export function Login() {
   const navigate = useNavigate();
+  const loginMutation = useLogin();
   const {
     register,
     handleSubmit,
@@ -15,15 +18,22 @@ export function Login() {
   } = useForm<LoginFormData>({
     mode: "onSubmit",
     defaultValues: {
-      username: "",
+      email: "",
       password: "",
     },
   });
 
-  const onSubmit = (data: LoginFormData) => {
-    // Add authentication logic here with data.username and data.password
-    console.log("Login data:", data);
-    navigate("/admin/user-management");
+  const onSubmit = async (data: LoginFormData) => {
+    try {
+      const result = await loginMutation.mutateAsync({
+        email: data.email,
+        password: data.password,
+      });
+      toast.success(`Welcome, ${result.email}!`);
+      navigate("/admin/user-management");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Login failed");
+    }
   };
 
   return (
@@ -35,19 +45,25 @@ export function Login() {
 
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">
           <div className="flex flex-col gap-2">
-            <label htmlFor="username" className="text-sm text-gray-600">
-              Username
+            <label htmlFor="email" className="text-sm text-gray-600">
+              Email
             </label>
             <input
-              type="text"
-              id="username"
-              {...register("username", { required: "Username is required" })}
+              type="email"
+              id="email"
+              {...register("email", {
+                required: "Email is required",
+                pattern: {
+                  value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                  message: "Invalid email address",
+                },
+              })}
               className="px-3 py-3 text-base text-gray-900 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter your username"
+              placeholder="Enter your email"
             />
-            {errors.username && (
+            {errors.email && (
               <span className="text-red-500 text-sm">
-                {errors.username.message}
+                {errors.email.message}
               </span>
             )}
           </div>
@@ -72,9 +88,10 @@ export function Login() {
 
           <button
             type="submit"
-            className="px-3 py-3 text-base bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors cursor-pointer mt-2.5"
+            disabled={loginMutation.isPending}
+            className="px-3 py-3 text-base bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors cursor-pointer mt-2.5 disabled:bg-blue-400 disabled:cursor-not-allowed"
           >
-            Login
+            {loginMutation.isPending ? "Logging in..." : "Login"}
           </button>
         </form>
       </div>

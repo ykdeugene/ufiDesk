@@ -1,4 +1,4 @@
-import { Direction } from "~/admin/upload-floorplan/types/deskiunfo.types";
+import { Direction } from "../types/deskiunfo.types";
 
 interface DeskIconProps {
   size?: number;

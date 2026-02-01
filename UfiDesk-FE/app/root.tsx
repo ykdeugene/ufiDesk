@@ -9,11 +9,13 @@ import {
 } from "react-router";
 
 import type { Route } from "./+types/root";
-import "./app.css";
+import "./app.css"; // ✅ Direct import instead of ?url
 import { Navbar } from "./components/navbar/navbar";
-import { ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "./api/queryClient";
+import { ClientToastContainer } from "./components/ClientToastContainer";
 
+// root.tsx
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
   {
@@ -25,8 +27,11 @@ export const links: Route.LinksFunction = () => [
     rel: "stylesheet",
     href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap",
   },
+  {
+    rel: "stylesheet",
+    href: "https://cdn.jsdelivr.net/npm/react-toastify@10/dist/ReactToastify.min.css",
+  },
 ];
-
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
@@ -50,15 +55,22 @@ export default function App() {
   const isLoginPage = location.pathname === "/login";
 
   return (
-    <>
+    <QueryClientProvider client={queryClient}>
       {!isLoginPage && <Navbar />}
       <Outlet />
-      <ToastContainer
-        position="bottom-right"
-        autoClose={3000}
-        aria-label={undefined}
-      />
-    </>
+      <ClientToastContainer />
+    </QueryClientProvider>
+  );
+}
+
+export function HydrateFallback() {
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-gray-100">
+      <div className="text-center">
+        <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <p className="mt-4 text-gray-600">Loading UfiDesk...</p>
+      </div>
+    </div>
   );
 }
 

@@ -1,9 +1,6 @@
 import { RegularDeskIcon } from "./RegularDesk";
 import { StandingDeskIcon } from "./StandingDesk";
-import {
-  DeskType,
-  type DeskInfo,
-} from "~/admin/upload-floorplan/types/deskiunfo.types";
+import { DeskType, type DeskInfo } from "../types/deskiunfo.types";
 
 interface FloorplanGridProps {
   grid: (DeskInfo | null)[][];

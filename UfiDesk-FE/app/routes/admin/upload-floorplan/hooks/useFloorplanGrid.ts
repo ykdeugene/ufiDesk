@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { DeskInfo } from "~/admin/upload-floorplan/types/deskiunfo.types";
+import type { DeskInfo } from "../types/deskiunfo.types";
 
 export function useFloorplanGrid(
   saveToHistory: (

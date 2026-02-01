@@ -1,8 +1,5 @@
-import type { DeskInfo } from "~/admin/upload-floorplan/types/deskiunfo.types";
-import {
-  Direction,
-  DeskType,
-} from "~/admin/upload-floorplan/types/deskiunfo.types";
+import type { DeskInfo } from "../types/deskiunfo.types";
+import { Direction, DeskType } from "../types/deskiunfo.types";
 
 export function importFloorplanFromCSV(csvContent: string): {
   grid: (DeskInfo | null)[][];

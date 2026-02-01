@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import type { DeskInfo } from "~/admin/upload-floorplan/types/deskiunfo.types";
 import type { TemplateDesk } from "../types/floorplan.types";
+import type { DeskInfo } from "../types/deskiunfo.types";
 
 export function usePaintMode(
   grid: (DeskInfo | null)[][],
