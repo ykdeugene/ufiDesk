@@ -19,12 +19,10 @@ public class User {
     private String id;
     
     @Indexed(unique = true)
-    private String username;
-    
-    private String passwordHash;
-    
     private String email;
     
+    private String passwordHash;
+
     private String role;
     
     private boolean enabled;

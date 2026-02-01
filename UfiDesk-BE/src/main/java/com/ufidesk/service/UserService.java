@@ -33,12 +33,12 @@ public class UserService {
     private static final long LOCKOUT_DURATION_MINUTES = 15;
 
     /**
-     * Find user by username
-     * @param username the username to search for
+     * Find user by email
+     * @param email the email to search for
      * @return Optional containing the user if found
      */
-    public Optional<User> findByUsername(String username) {
-        return userRepository.findByUsername(username);
+    public Optional<User> findByEmail(String email) {
+        return userRepository.findByEmail(email);
     }
     
     /**
@@ -52,8 +52,71 @@ public class UserService {
     public boolean validatePassword(User user, String rawPassword) {
         return passwordEncoder.matches(rawPassword, user.getPasswordHash());
     }
-    
+
     /**
+     * Validate client-hashed password against stored hash.
+     * The frontend pre-hashes the password before sending it.
+     * We compare the received hash directly with the stored hash.
+     *
+     * @param user the user entity with stored password hash
+     * @param clientHashedPassword the hashed password received from frontend
+     * @return true if hashes match
+     */
+    public boolean validateClientHashedPassword(User user, String clientHashedPassword) {
+        if (clientHashedPassword == null || clientHashedPassword.isEmpty()) {
+            return false;
+        }
+        return user.getPasswordHash().equals(clientHashedPassword);
+    }
+
+    /**
+     * Validate encrypted password from frontend.
+     *
+     * Decrypts the password using email and loginTime, then validates against BCrypt hash.
+     *
+     * Flow:
+     * 1. Frontend encrypts plaintext password with AES/CBC using derived key+IV
+     * 2. Backend decrypts to get plaintext password
+     * 3. BCrypt.matches() hashes plaintext and compares with stored BCrypt hash
+     *
+     * @param user the user entity with stored password hash
+     * @param encryptedPassword Base64-encoded encrypted password from frontend
+     * @param email Email used for decryption
+     * @param loginTime Login timestamp used for decryption
+     * @return true if decrypted password matches stored hash
+     */
+    public boolean validateEncryptedPassword(User user, String encryptedPassword, String email, String loginTime) {
+      try {
+        // Decrypt the password to get plaintext
+        String decryptedPassword = com.ufidesk.security.EncryptionUtils.decryptPassword(
+            encryptedPassword, email, loginTime);
+
+
+        // **TEMPORARY: Generate and log the BCrypt hash for DB storage**
+        // Remove this in production!
+//        log.debug("Decrypted password for user {}: {}", email, decryptedPassword);
+//        String generatedHash = passwordEncoder.encode(decryptedPassword);
+//        log.debug("HASH_FOR_DB - User {}: {}", email, generatedHash);
+//        log.debug("Copy this hash to your MongoDB setup script ^^^");
+
+        // Validate decrypted plaintext password against stored BCrypt hash
+        boolean isValid = passwordEncoder.matches(decryptedPassword, user.getPasswordHash());
+
+        if (!isValid) {
+          log.warn("Password validation failed for user: {}", email);
+        } else {
+          log.debug("Password validation successful for user: {}", email);
+        }
+
+        return isValid;
+      } catch (Exception e) {
+        log.error("Failed to validate encrypted password for user: {}", email, e);
+        return false;
+      }
+    }
+
+
+  /**
      * Check if user account is locked due to failed login attempts
      * @param user the user to check
      * @return true if account is currently locked
@@ -84,7 +147,7 @@ public class UserService {
         if (user.getFailedLoginAttempts() >= MAX_FAILED_ATTEMPTS) {
             // Lock the account for LOCKOUT_DURATION_MINUTES
             user.setAccountLockedUntil(LocalDateTime.now().plusMinutes(LOCKOUT_DURATION_MINUTES));
-            log.warn("Account locked due to {} failed login attempts: {}", MAX_FAILED_ATTEMPTS, user.getUsername());
+            log.warn("Account locked due to {} failed login attempts: {}", MAX_FAILED_ATTEMPTS, user.getEmail());
         }
 
         userRepository.save(user);
@@ -99,21 +162,20 @@ public class UserService {
         user.setAccountLockedUntil(null);
         user.setLastLogin(LocalDateTime.now());
         userRepository.save(user);
-        log.info("Successful login for user: {}", user.getUsername());
+        log.info("Successful login for user: {}", user.getEmail());
     }
 
     /**
      * Create a new user with validation
-     * @param username the username
+     * @param email the user's email (used as login identifier)
      * @param rawPassword the raw password (will be hashed)
-     * @param email the user's email
      * @param role the user's role
      * @return the created user
-     * @throws IllegalArgumentException if username exists or password is weak
+     * @throws IllegalArgumentException if email exists or password is weak
      */
-    public User createUser(String username, String rawPassword, String email, String role) {
-        if (userRepository.existsByUsername(username)) {
-            throw new IllegalArgumentException("Username already exists");
+    public User createUser(String email, String rawPassword, String role) {
+        if (userRepository.existsByEmail(email)) {
+            throw new IllegalArgumentException("Email already exists");
         }
         
         if (!SecurityUtils.isValidPasswordStrength(rawPassword)) {
@@ -124,9 +186,36 @@ public class UserService {
         }
 
         User user = new User();
-        user.setUsername(username);
-        user.setPasswordHash(passwordEncoder.encode(rawPassword));
         user.setEmail(email);
+        user.setPasswordHash(passwordEncoder.encode(rawPassword));
+        user.setRole(role != null ? role : "USER");
+        user.setEnabled(true);
+        user.setCreatedAt(LocalDateTime.now());
+        user.setFailedLoginAttempts(0);
+
+        return userRepository.save(user);
+    }
+
+    /**
+     * Create a new user with a client-hashed password (already hashed on frontend)
+     * @param email the user's email (used as login identifier)
+     * @param clientHashedPassword the hashed password from frontend
+     * @param role the user's role
+     * @return the created user
+     * @throws IllegalArgumentException if email exists
+     */
+    public User createUserWithHashedPassword(String email, String clientHashedPassword, String role) {
+        if (userRepository.existsByEmail(email)) {
+            throw new IllegalArgumentException("Email already exists");
+        }
+
+        if (clientHashedPassword == null || clientHashedPassword.isEmpty()) {
+            throw new IllegalArgumentException("Password hash cannot be empty");
+        }
+
+        User user = new User();
+        user.setEmail(email);
+        user.setPasswordHash(clientHashedPassword);
         user.setRole(role != null ? role : "USER");
         user.setEnabled(true);
         user.setCreatedAt(LocalDateTime.now());

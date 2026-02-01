@@ -7,8 +7,8 @@ db = db.getSiblingDB('ufidesk');
 // Create users collection with indexes
 db.createCollection('users');
 
-// Create unique index on username
-db.users.createIndex({ "username": 1 }, { unique: true });
+// Create unique index on email (email is now the login identifier)
+db.users.createIndex({ "email": 1 }, { unique: true });
 
 // Create index on role for faster queries
 db.users.createIndex({ "role": 1 });
@@ -29,9 +29,8 @@ db.SPRING_SESSION_ATTRIBUTES.createIndex({ "sessionId": 1 });
 // Generated using BCrypt with salt rounds = 10
 db.users.insertOne({
     "_id": ObjectId(),
-    "username": "superadmin",
-    "passwordHash": "$2a$10$s0tM/w9pKJY3KjJ3lGKkpe8Mk1f1RVxfI0EYRzQzXl/xvkAFaKLZG",
     "email": "superadmin@ufidesk.com",
+    "passwordHash": "$2a$10$s0tM/w9pKJY3KjJ3lGKkpe8Mk1f1RVxfI0EYRzQzXl/xvkAFaKLZG",
     "role": "SUPERADMIN",
     "enabled": true,
     "createdAt": new Date(),
@@ -42,4 +41,4 @@ db.users.insertOne({
 
 print("Database initialization complete!");
 print("Created collections: users, SPRING_SESSION, SPRING_SESSION_ATTRIBUTES");
-print("Superadmin user created with username: 'superadmin', password: 'password'");
+print("Superadmin user created with email: 'superadmin@ufidesk.com', password: 'password'");

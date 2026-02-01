@@ -27,39 +27,40 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<LoginResponse>> login(@Valid @RequestBody LoginRequest loginRequest, 
                                    HttpServletRequest request) {
-        log.info("Login attempt for username: {}", loginRequest.getUsername());
-        
-        // Find user by username
-        Optional<User> userOptional = userService.findByUsername(loginRequest.getUsername());
-        
+        log.info("Login attempt for email: {}", loginRequest.getEmail());
+
+        // Find user by email
+        Optional<User> userOptional = userService.findByEmail(loginRequest.getEmail());
+
         if (userOptional.isEmpty()) {
-            log.warn("Login failed: User not found - {}", loginRequest.getUsername());
+            log.warn("Login failed: User not found - {}", loginRequest.getEmail());
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error("Invalid username or password"));
+                    .body(ApiResponse.error("Invalid email or password"));
         }
         
         User user = userOptional.get();
         
         // Check if user account is locked due to failed login attempts
         if (userService.isAccountLocked(user)) {
-            log.warn("Login failed: Account locked - {}", loginRequest.getUsername());
+            log.warn("Login failed: Account locked - {}", loginRequest.getEmail());
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(ApiResponse.error("Account is temporarily locked due to too many failed login attempts"));
         }
 
         // Check if user is enabled
         if (!user.isEnabled()) {
-            log.warn("Login failed: User account disabled - {}", loginRequest.getUsername());
+            log.warn("Login failed: User account disabled - {}", loginRequest.getEmail());
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(ApiResponse.error("Account is disabled"));
         }
 
-        // Validate password using BCrypt
-        if (!userService.validatePassword(user, loginRequest.getPassword())) {
-            log.warn("Login failed: Invalid password for user - {}", loginRequest.getUsername());
+        // Validate encrypted password (frontend sends encrypted password with email + loginTime as salt)
+        if (!userService.validateEncryptedPassword(user, loginRequest.getPassword(),
+                loginRequest.getEmail(), loginRequest.getLoginTime())) {
+            log.warn("Login failed: Invalid password for user - {}", loginRequest.getEmail());
             userService.handleFailedLoginAttempt(user);
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error("Invalid username or password"));
+                    .body(ApiResponse.error("Invalid email or password"));
         }
         
         // Password is valid - handle successful login
@@ -68,13 +69,13 @@ public class AuthController {
         // Create session
         HttpSession session = request.getSession(true);
         session.setAttribute("userId", user.getId());
-        session.setAttribute("username", user.getUsername());
+        session.setAttribute("email", user.getEmail());
         session.setAttribute("role", user.getRole());
         
-        log.info("Login successful for user: {}", user.getUsername());
-        
+        log.info("Login successful for user: {}", user.getEmail());
+
         LoginResponse response = new LoginResponse(
-                user.getUsername(),
+                user.getEmail(),
                 user.getRole(),
                 "Login successful"
         );
@@ -86,9 +87,9 @@ public class AuthController {
     public ResponseEntity<ApiResponse<Void>> logout(HttpServletRequest request) {
         HttpSession session = request.getSession(false);
         if (session != null) {
-            String username = (String) session.getAttribute("username");
+            String email = (String) session.getAttribute("email");
             session.invalidate();
-            log.info("User logged out: {}", username);
+            log.info("User logged out: {}", email);
             return ResponseEntity.ok(ApiResponse.<Void>success("Logout successful", null));
         }
         return ResponseEntity.ok(ApiResponse.<Void>success("No active session", null));
@@ -99,7 +100,7 @@ public class AuthController {
         HttpSession session = request.getSession(false);
         if (session != null && session.getAttribute("userId") != null) {
             LoginResponse response = new LoginResponse(
-                    (String) session.getAttribute("username"),
+                    (String) session.getAttribute("email"),
                     (String) session.getAttribute("role"),
                     "Session active"
             );
