@@ -17,5 +17,4 @@ export interface DeskInfo {
   direction: Direction;
   hasMonitor: boolean;
   type: DeskType;
-  isAvailable: boolean;
 }

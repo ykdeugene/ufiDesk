@@ -1,6 +1,6 @@
+import type { TemplateDesk } from "../types/floorplan.types";
 import { RegularDeskIcon } from "./RegularDesk";
 import { StandingDeskIcon } from "./StandingDesk";
-import type { TemplateDesk } from "../../../../admin/upload-floorplan/types/floorplan.types";
 
 interface FloorplanToolbarProps {
   xLength: number;

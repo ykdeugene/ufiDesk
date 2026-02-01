@@ -63,7 +63,6 @@ export function importFloorplanFromCSV(csvContent: string): {
           direction,
           hasMonitor,
           type,
-          isAvailable: true,
         };
       } catch (error) {
         // Ignore any parsing errors and continue
