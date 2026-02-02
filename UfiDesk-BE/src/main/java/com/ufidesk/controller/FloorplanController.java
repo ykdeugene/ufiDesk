@@ -1,6 +1,7 @@
 package com.ufidesk.controller;
 
 import com.ufidesk.dto.ApiResponse;
+import com.ufidesk.dto.SetMainFloorplanRequest;
 import com.ufidesk.model.Floorplan;
 import com.ufidesk.service.FloorplanService;
 import lombok.RequiredArgsConstructor;
@@ -76,6 +77,39 @@ public class FloorplanController {
             log.error("❌ Error retrieving floorplans: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("Failed to retrieve floorplans: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Set a floorplan as the main floorplan.
+     *
+     * This endpoint:
+     * 1. Finds the current main floorplan (isMain = true) and sets it to false
+     * 2. Sets the requested floorplan (by ID) as the main floorplan (isMain = true)
+     *
+     * Only ADMIN and SUPERADMIN users can perform this operation.
+     *
+     * @param request the request containing the floorplan ID to set as main
+     * @return success response with the updated floorplan
+     */
+    @PreAuthorize("hasAuthority('ADMIN') or hasAuthority('SUPERADMIN')")
+    @PostMapping("/set-main")
+    public ResponseEntity<ApiResponse<Floorplan>> setMainFloorplan(@RequestBody SetMainFloorplanRequest request) {
+        log.info("Attempting to set floorplan {} as main", request.getFloorplanId());
+
+        try {
+            Floorplan updatedFloorplan = floorplanService.setMainFloorplan(request.getFloorplanId());
+
+            log.info("✅ Floorplan {} set as main successfully", request.getFloorplanId());
+            return ResponseEntity.ok(ApiResponse.success("Floorplan set as main successfully", updatedFloorplan));
+        } catch (IllegalArgumentException e) {
+            log.error("❌ Floorplan not found: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error("Floorplan not found: " + e.getMessage()));
+        } catch (Exception e) {
+            log.error("❌ Error setting main floorplan: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to set main floorplan: " + e.getMessage()));
         }
     }
 }

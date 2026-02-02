@@ -32,7 +32,7 @@ public class Floorplan {
     private List<Desk> desks;
 
     @JsonProperty("isMain")
-    private boolean isMain;
+    private boolean main;
 
     private LocalDateTime createdAt;
 

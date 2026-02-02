@@ -64,4 +64,42 @@ public class FloorplanService {
 
         return floorplans;
     }
+
+    /**
+     * Set a floorplan as the main floorplan.
+     *
+     * This method:
+     * 1. Finds the current main floorplan (main = true) and sets it to false
+     * 2. Sets the requested floorplan (by ID) as the main floorplan (main = true)
+     *
+     * @param floorplanId the ID of the floorplan to set as main
+     * @return the updated floorplan that was set as main
+     * @throws IllegalArgumentException if the floorplan is not found
+     */
+    public Floorplan setMainFloorplan(String floorplanId) {
+        log.info("Setting floorplan {} as main", floorplanId);
+
+        // Find and unset the current main floorplan
+        floorplanRepository.findByMainTrue().ifPresent(currentMain -> {
+            log.info("Unsetting current main floorplan: {}", currentMain.getId());
+            currentMain.setMain(false);
+            floorplanRepository.save(currentMain);
+            log.info("✅ Current main floorplan unset");
+        });
+
+        // Find the floorplan to set as main
+        Floorplan floorplan = floorplanRepository.findById(floorplanId)
+                .orElseThrow(() -> {
+                    log.error("❌ Floorplan not found with ID: {}", floorplanId);
+                    return new IllegalArgumentException("Floorplan not found with ID: " + floorplanId);
+                });
+
+        // Set it as main
+        floorplan.setMain(true);
+        floorplan.setUpdatedAt(LocalDateTime.now());
+        Floorplan updated = floorplanRepository.save(floorplan);
+
+        log.info("✅ Floorplan {} set as main successfully", floorplanId);
+        return updated;
+    }
 }
