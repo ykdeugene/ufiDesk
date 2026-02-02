@@ -8,7 +8,13 @@ export {
 } from "./useAdmin";
 export {
   useGetFloorplan,
+  useGetMainFloorplan,
   useUploadFloorplan,
   useSetMainFloorplan,
   floorplanKeys,
 } from "./useFloorplan";
+export {
+  useGetDesksByMainFloorplan as useGetDesksByFloorplan,
+  useUpdateDeskDetails,
+  deskKeys,
+} from "./useDesk";

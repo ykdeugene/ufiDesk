@@ -13,15 +13,16 @@ export function Navbar() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isAdminMode, setIsAdminMode] = useState(false);
 
-  const { data: sessionData } = useSessionStatus();
+  const { data: sessionData, isLoading } = useSessionStatus();
   const logout = useLogout();
 
   // Check if session is valid, if not redirect to login
+  // Only redirect if we're done loading and have confirmed no session
   useEffect(() => {
-    if (sessionData === null) {
+    if (!isLoading && sessionData === null) {
       navigate("/login");
     }
-  }, [sessionData, navigate]);
+  }, [sessionData, isLoading, navigate]);
 
   const navItems: NavItem[] = [
     { label: "Upload Floorplan", path: "/admin/upload-floorplan" },

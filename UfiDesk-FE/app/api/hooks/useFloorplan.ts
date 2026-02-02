@@ -5,6 +5,7 @@ import { apiClient } from "../client";
 export const floorplanKeys = {
   all: ["floorplan"] as const,
   list: () => [...floorplanKeys.all, "list"] as const,
+  main: () => [...floorplanKeys.all, "main"] as const,
 };
 
 // Types
@@ -49,6 +50,25 @@ export function useGetFloorplan() {
 
       if (!response.success) {
         throw new Error(response.message || "Failed to fetch floorplan");
+      }
+
+      return response.data;
+    },
+  });
+}
+
+/**
+ * Hook for getting main floorplan
+ * GET /floorplan/get-main
+ */
+export function useGetMainFloorplan() {
+  return useQuery({
+    queryKey: floorplanKeys.main(),
+    queryFn: async () => {
+      const response = await apiClient.get<Floorplan>("/floorplan/get-main");
+
+      if (!response.success) {
+        throw new Error(response.message || "Failed to fetch main floorplan");
       }
 
       return response.data;
