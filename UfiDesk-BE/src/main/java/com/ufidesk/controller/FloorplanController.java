@@ -19,6 +19,8 @@ import java.util.List;
  * Endpoints:
  * - POST /floorplan/upload - Save a new floorplan (ADMIN/SUPERADMIN only)
  * - GET /floorplan/get-floorplan - Retrieve all floorplans (authenticated users only)
+ * - GET /floorplan/get-main - Retrieve the main floorplan (authenticated users only)
+ * - POST /floorplan/set-main - Set a floorplan as main (ADMIN/SUPERADMIN only)
  */
 @RestController
 @RequestMapping("/floorplan")
@@ -77,6 +79,34 @@ public class FloorplanController {
             log.error("❌ Error retrieving floorplans: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("Failed to retrieve floorplans: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Get the main floorplan.
+     *
+     * Any authenticated user can perform this operation.
+     *
+     * @return success response with the main floorplan
+     */
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/get-main")
+    public ResponseEntity<ApiResponse<Floorplan>> getMainFloorplan() {
+        log.info("Fetching main floorplan");
+
+        try {
+            Floorplan mainFloorplan = floorplanService.getMainFloorplan();
+
+            log.info("✅ Main floorplan retrieved with ID: {}", mainFloorplan.getId());
+            return ResponseEntity.ok(ApiResponse.success("Main floorplan retrieved successfully", mainFloorplan));
+        } catch (IllegalArgumentException e) {
+            log.error("❌ No main floorplan found: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error("No main floorplan found: " + e.getMessage()));
+        } catch (Exception e) {
+            log.error("❌ Error retrieving main floorplan: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to retrieve main floorplan: " + e.getMessage()));
         }
     }
 

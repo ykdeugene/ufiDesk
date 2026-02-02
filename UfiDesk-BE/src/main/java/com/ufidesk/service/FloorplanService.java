@@ -16,6 +16,7 @@ import java.util.UUID;
  * Provides methods to:
  * - Save floorplans to the database
  * - Retrieve all floorplans
+ * - Set main floorplan and save associated desks
  */
 @Service
 @RequiredArgsConstructor
@@ -23,6 +24,7 @@ import java.util.UUID;
 public class FloorplanService {
 
     private final FloorplanRepository floorplanRepository;
+    private final DeskService deskService;
 
     /**
      * Save a new floorplan to the database.
@@ -71,6 +73,7 @@ public class FloorplanService {
      * This method:
      * 1. Finds the current main floorplan (main = true) and sets it to false
      * 2. Sets the requested floorplan (by ID) as the main floorplan (main = true)
+     * 3. Saves all desk information from the floorplan to the desk collection
      *
      * @param floorplanId the ID of the floorplan to set as main
      * @return the updated floorplan that was set as main
@@ -99,7 +102,30 @@ public class FloorplanService {
         floorplan.setUpdatedAt(LocalDateTime.now());
         Floorplan updated = floorplanRepository.save(floorplan);
 
-        log.info("✅ Floorplan {} set as main successfully", floorplanId);
+        // Save all desks from the floorplan to the desk collection
+        log.info("📦 Saving desk information for floorplan: {}", floorplanId);
+        deskService.saveDesksFromFloorplan(updated);
+
+        log.info("✅ Floorplan {} set as main successfully with desks saved", floorplanId);
         return updated;
+    }
+
+    /**
+     * Get the main floorplan.
+     *
+     * @return the floorplan where main is true
+     * @throws IllegalArgumentException if no main floorplan is found
+     */
+    public Floorplan getMainFloorplan() {
+        log.info("Fetching main floorplan");
+
+        Floorplan mainFloorplan = floorplanRepository.findByMainTrue()
+                .orElseThrow(() -> {
+                    log.error("❌ No main floorplan found");
+                    return new IllegalArgumentException("No main floorplan found");
+                });
+
+        log.info("✅ Main floorplan retrieved with ID: {}", mainFloorplan.getId());
+        return mainFloorplan;
     }
 }
