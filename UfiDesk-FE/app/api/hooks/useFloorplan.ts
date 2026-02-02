@@ -25,6 +25,7 @@ export interface Floorplan {
   desks: Desk[];
   createdAt?: string;
   updatedAt?: string;
+  isMain?: boolean;
 }
 
 export interface UploadFloorplanRequest {
@@ -69,6 +70,26 @@ export function useUploadFloorplan() {
 
       if (!response.success) {
         throw new Error(response.message || "Failed to upload floorplan");
+      }
+
+      return response.data;
+    },
+  });
+}
+
+/**
+ * Hook for setting main floorplan
+ * POST /floorplan/set-main
+ */
+export function useSetMainFloorplan() {
+  return useMutation({
+    mutationFn: async (floorplanId: string) => {
+      const response = await apiClient.post<Floorplan>("/floorplan/set-main", {
+        floorplanId,
+      });
+
+      if (!response.success) {
+        throw new Error(response.message || "Failed to set main floorplan");
       }
 
       return response.data;

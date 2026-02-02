@@ -13,6 +13,10 @@ export default [
     `${adminPrefix}upload-floorplan`,
     "routes/admin/upload-floorplan/upload-floorplan-page.tsx",
   ),
+  route(
+    `${adminPrefix}floorplan-details`,
+    "routes/admin/floorplan-details/floorplan-details-page.tsx",
+  ),
   // Catch-all route for unmatched paths (must be last)
   route("*", "routes/not-found.tsx"),
 ] satisfies RouteConfig;

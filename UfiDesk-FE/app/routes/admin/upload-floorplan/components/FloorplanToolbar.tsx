@@ -1,4 +1,5 @@
 import type { TemplateDesk } from "../types/floorplan.types";
+import type { Floorplan } from "~/api/hooks/useFloorplan";
 import { RegularDeskIcon } from "./RegularDesk";
 import { StandingDeskIcon } from "./StandingDesk";
 
@@ -10,6 +11,7 @@ interface FloorplanToolbarProps {
   deskTemplatesNoMonitor: TemplateDesk[];
   standingDeskTemplates: TemplateDesk[];
   standingDeskTemplatesNoMonitor: TemplateDesk[];
+  selectedFloorplan: Floorplan | null;
   onXLengthChange: (value: number) => void;
   onYLengthChange: (value: number) => void;
   onUndo: () => void;
@@ -18,6 +20,7 @@ interface FloorplanToolbarProps {
   onSave: () => void;
   onDownload: () => void;
   onUpload: (file: File) => void;
+  onSetMainFloorplan: () => void;
 }
 
 export function FloorplanToolbar({
@@ -28,6 +31,7 @@ export function FloorplanToolbar({
   deskTemplatesNoMonitor,
   standingDeskTemplates,
   standingDeskTemplatesNoMonitor,
+  selectedFloorplan,
   onXLengthChange,
   onYLengthChange,
   onUndo,
@@ -36,6 +40,7 @@ export function FloorplanToolbar({
   onSave,
   onDownload,
   onUpload,
+  onSetMainFloorplan,
 }: FloorplanToolbarProps) {
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -284,6 +289,35 @@ export function FloorplanToolbar({
               <line x1="12" y1="3" x2="12" y2="15" />
             </svg>
             Upload CSV
+          </button>
+          <button
+            type="button"
+            onClick={onSetMainFloorplan}
+            disabled={!selectedFloorplan || selectedFloorplan.isMain}
+            className={`px-6 py-2 text-sm rounded transition-colors font-medium flex items-center gap-2 ${
+              selectedFloorplan?.isMain
+                ? "bg-green-100 text-green-700 border border-green-300 cursor-default"
+                : "text-gray-700 border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            }`}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M12 2L2 7l10 5 10-5-10-5z" />
+              <path d="M2 17l10 5 10-5" />
+              <path d="M2 12l10 5 10-5" />
+            </svg>
+            {selectedFloorplan?.isMain
+              ? "Floorplan is main"
+              : "Set Main Floorplan"}
           </button>
           <input
             id="csv-upload"

@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { useGetFloorplan, useUploadFloorplan } from "~/api/hooks";
+import {
+  useGetFloorplan,
+  useUploadFloorplan,
+  useSetMainFloorplan,
+} from "~/api/hooks";
 import { FloorplanGrid } from "./components/FloorplanGrid";
 import { FloorplanToolbar } from "./components/FloorplanToolbar";
 import {
@@ -29,6 +33,7 @@ type FloorplanFormData = {
 
 export function UploadFloorplanPage() {
   const uploadFloorplan = useUploadFloorplan();
+  const setMainFloorplan = useSetMainFloorplan();
   const {
     data: allFloorplans,
     isLoading: isLoadingFloorplans,
@@ -71,6 +76,10 @@ export function UploadFloorplanPage() {
     handleCellMouseEnter,
     handleClearCell,
   } = usePaintMode(grid, setGrid, xLength, yLength, saveToHistory);
+
+  // Track the selected floorplan object
+  const selectedFloorplan =
+    allFloorplans?.find((fp) => fp.id === selectedFloorplanId) || null;
 
   // Load floorplan when selection changes
   useEffect(() => {
@@ -260,6 +269,29 @@ export function UploadFloorplanPage() {
     setSelectedFloorplanId("");
   };
 
+  const handleSetMainFloorplan = () => {
+    if (!selectedFloorplan) {
+      toast.error("Please select a floorplan first");
+      return;
+    }
+
+    setMainFloorplan.mutate(selectedFloorplan.id, {
+      onSuccess: () => {
+        toast.success(
+          `"${selectedFloorplan.name}" is now set as the main floorplan`,
+        );
+        refetchFloorplans();
+      },
+      onError: (error) => {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Failed to set main floorplan",
+        );
+      },
+    });
+  };
+
   return (
     <FormProvider {...uploadFloorplanForm}>
       <form onSubmit={uploadFloorplanForm.handleSubmit(handleSaveConfirm)}>
@@ -352,6 +384,7 @@ export function UploadFloorplanPage() {
               xLength={xLength}
               yLength={yLength}
               historyIndex={historyIndex}
+              selectedFloorplan={selectedFloorplan}
               deskTemplates={deskTemplates}
               deskTemplatesNoMonitor={deskTemplatesNoMonitor}
               standingDeskTemplates={standingDeskTemplates}
@@ -364,6 +397,7 @@ export function UploadFloorplanPage() {
               onSave={handleSave}
               onDownload={handleDownload}
               onUpload={handleUpload}
+              onSetMainFloorplan={handleSetMainFloorplan}
             />
 
             <FloorplanGrid

@@ -9,5 +9,6 @@ export {
 export {
   useGetFloorplan,
   useUploadFloorplan,
+  useSetMainFloorplan,
   floorplanKeys,
 } from "./useFloorplan";

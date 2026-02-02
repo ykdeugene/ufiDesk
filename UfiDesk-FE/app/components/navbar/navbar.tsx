@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router";
+import { useSessionStatus, useLogout } from "~/api/hooks";
 
 interface NavItem {
   label: string;
@@ -11,11 +12,21 @@ export function Navbar() {
   const location = useLocation();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isAdminMode, setIsAdminMode] = useState(false);
-  const [username] = useState("john.doe@ufidesk.com");
+
+  const { data: sessionData } = useSessionStatus();
+  const logout = useLogout();
+
+  // Check if session is valid, if not redirect to login
+  useEffect(() => {
+    if (sessionData === null) {
+      navigate("/login");
+    }
+  }, [sessionData, navigate]);
 
   const navItems: NavItem[] = [
     { label: "Upload Floorplan", path: "/admin/upload-floorplan" },
     { label: "User Management", path: "/admin/user-management" },
+    { label: "Floorplan Details", path: "/admin/floorplan-details" },
   ];
 
   // Sort nav items: current page first, then alphabetically
@@ -29,9 +40,15 @@ export function Navbar() {
   });
 
   const handleLogout = () => {
-    // Add logout logic here
-    console.log("Logging out...");
-    navigate("/login");
+    logout.mutate(undefined, {
+      onSuccess: () => {
+        navigate("/login");
+      },
+      onError: () => {
+        // Even if logout fails, redirect to login
+        navigate("/login");
+      },
+    });
   };
 
   const toggleAdminMode = () => {
@@ -65,7 +82,7 @@ export function Navbar() {
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
               className="flex items-center gap-2 bg-gray-100 text-gray-800 px-4 py-2 rounded hover:bg-gray-200 transition-colors"
             >
-              <span>{username}</span>
+              <span>{sessionData?.email || "Loading..."}</span>
               <svg
                 className={`w-4 h-4 transition-transform duration-200 ${
                   isDropdownOpen ? "rotate-180" : ""
