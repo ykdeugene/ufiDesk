@@ -6,9 +6,7 @@ import {
   useGetDesksByFloorplan,
   useUpdateDeskDetails,
 } from "~/api/hooks";
-import { RegularDeskIcon } from "../upload-floorplan/components/RegularDesk";
-import { StandingDeskIcon } from "../upload-floorplan/components/StandingDesk";
-import { Direction } from "../upload-floorplan/types/deskiunfo.types";
+import { FloorplanGrid } from "~/components/FloorplanGrid";
 import type { Desk } from "~/api/hooks/useFloorplan";
 
 interface DeskDetailsFormData {
@@ -24,6 +22,9 @@ export function FloorplanDetails() {
   const updateDeskDetails = useUpdateDeskDetails();
   const [selectedDesk, setSelectedDesk] = useState<Desk | null>(null);
   const [showIcons, setShowIcons] = useState(true);
+
+  // Convert single desk to array for FloorplanGrid component
+  const selectedDesks = selectedDesk ? [selectedDesk] : [];
 
   const {
     register,
@@ -71,22 +72,6 @@ export function FloorplanDetails() {
   const gridWidth = mainFloorplan.xLength * cellSize;
   const gridHeight = mainFloorplan.yLength * cellSize;
 
-  // Convert direction string to Direction enum
-  const getDirectionEnum = (direction: string): Direction => {
-    switch (direction.toLowerCase()) {
-      case "up":
-        return Direction.Up;
-      case "down":
-        return Direction.Down;
-      case "left":
-        return Direction.Left;
-      case "right":
-        return Direction.Right;
-      default:
-        return Direction.Up;
-    }
-  };
-
   const handleDeskClick = (desk: Desk) => {
     setSelectedDesk(desk);
 
@@ -128,116 +113,13 @@ export function FloorplanDetails() {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      {/* Left Half - Floorplan Display */}
-      <div className="w-1/2 flex flex-col items-center p-8 border-r border-gray-300">
-        <div className="mb-4 text-center">
-          <h2 className="text-2xl font-bold text-gray-800">
-            {mainFloorplan.name}
-          </h2>
-          <p className="text-sm text-gray-600">
-            Dimensions: {mainFloorplan.xLength} x {mainFloorplan.yLength}
-          </p>
-        </div>
-
-        {/* Grid Container */}
-        <div
-          className="relative bg-white border-2 border-gray-400 shadow-lg"
-          style={{
-            width: `${gridWidth}px`,
-            height: `${gridHeight}px`,
-          }}
-        >
-          {/* Grid Lines */}
-          <svg
-            className="absolute inset-0 pointer-events-none"
-            style={{ width: gridWidth, height: gridHeight }}
-          >
-            {/* Vertical lines */}
-            {Array.from({ length: mainFloorplan.xLength + 1 }).map((_, i) => (
-              <line
-                key={`v-${i}`}
-                x1={i * cellSize}
-                y1={0}
-                x2={i * cellSize}
-                y2={gridHeight}
-                stroke="#e5e7eb"
-                strokeWidth="1"
-              />
-            ))}
-            {/* Horizontal lines */}
-            {Array.from({ length: mainFloorplan.yLength + 1 }).map((_, i) => (
-              <line
-                key={`h-${i}`}
-                x1={0}
-                y1={i * cellSize}
-                x2={gridWidth}
-                y2={i * cellSize}
-                stroke="#e5e7eb"
-                strokeWidth="1"
-              />
-            ))}
-          </svg>
-
-          {/* Desks */}
-          {mainFloorplan.desks.map((desk) => (
-            <div
-              key={desk.id}
-              className={`absolute cursor-pointer transition-all ${
-                selectedDesk?.id === desk.id
-                  ? "ring-4 ring-blue-500 scale-105"
-                  : "hover:ring-2 hover:ring-blue-300"
-              }`}
-              style={{
-                left: `${desk.x * cellSize}px`,
-                top: `${desk.y * cellSize}px`,
-                width: `${cellSize}px`,
-                height: `${cellSize}px`,
-              }}
-              onClick={() => handleDeskClick(desk)}
-            >
-              {showIcons ? (
-                // Show desk icons
-                desk.type === "regular" ? (
-                  <RegularDeskIcon
-                    size={cellSize}
-                    hasMonitor={desk.hasMonitor}
-                    direction={getDirectionEnum(desk.direction)}
-                  />
-                ) : (
-                  <StandingDeskIcon
-                    size={cellSize}
-                    hasMonitor={desk.hasMonitor}
-                    direction={getDirectionEnum(desk.direction)}
-                  />
-                )
-              ) : (
-                // Show desk IDs
-                <div className="w-full h-full flex items-center justify-center text-xs font-medium text-gray-800">
-                  {desk.id}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* Toggle Button - Bottom Right */}
-        <div className="mt-4 flex items-center justify-end gap-3">
-          <span className="text-sm font-medium text-gray-700">Desk IDs</span>
-          <button
-            onClick={() => setShowIcons(!showIcons)}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-              showIcons ? "bg-blue-600" : "bg-gray-300"
-            }`}
-          >
-            <span
-              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${
-                showIcons ? "translate-x-6" : "translate-x-1"
-              }`}
-            />
-          </button>
-          <span className="text-sm font-medium text-gray-700">Desk Icons</span>
-        </div>
-      </div>
+      <FloorplanGrid
+        mainFloorplan={mainFloorplan}
+        selectedDesks={selectedDesks}
+        onDeskClick={handleDeskClick}
+        showIcons={showIcons}
+        setShowIcons={setShowIcons}
+      />
 
       {/* Right Half - Desk Details */}
       <div className="w-1/2 flex flex-col p-8">

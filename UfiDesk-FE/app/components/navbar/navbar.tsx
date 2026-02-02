@@ -28,17 +28,13 @@ export function Navbar() {
     { label: "Upload Floorplan", path: "/admin/upload-floorplan" },
     { label: "User Management", path: "/admin/user-management" },
     { label: "Floorplan Details", path: "/admin/floorplan-details" },
+    { label: "Desk Booking", path: "/user/desk-booking" },
   ];
 
-  // Sort nav items: current page first, then alphabetically
-  const sortedNavItems = [...navItems].sort((a, b) => {
-    const aIsCurrent = location.pathname === a.path;
-    const bIsCurrent = location.pathname === b.path;
-
-    if (aIsCurrent) return -1;
-    if (bIsCurrent) return 1;
-    return a.label.localeCompare(b.label);
-  });
+  // Sort nav items alphabetically
+  const sortedNavItems = [...navItems].sort((a, b) =>
+    a.label.localeCompare(b.label),
+  );
 
   const handleLogout = () => {
     logout.mutate(undefined, {
