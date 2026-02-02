@@ -31,6 +31,9 @@ public class Floorplan {
     @JsonProperty("desks")
     private List<Desk> desks;
 
+    @JsonProperty("isMain")
+    private boolean isMain;
+
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
