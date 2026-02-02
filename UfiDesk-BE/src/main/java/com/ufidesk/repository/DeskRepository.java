@@ -33,6 +33,16 @@ public interface DeskRepository extends MongoRepository<DeskDocument, String> {
     Optional<DeskDocument> findByFloorplanIdAndDeskId(String floorplanId, String deskId);
 
     /**
+     * Find all desks by floorplan ID and desk ID.
+     * Use this method when there might be multiple results.
+     *
+     * @param floorplanId the ID of the floorplan
+     * @param deskId the ID of the desk
+     * @return list of desk documents matching the criteria
+     */
+    List<DeskDocument> findAllByFloorplanIdAndDeskId(String floorplanId, String deskId);
+
+    /**
      * Delete all desks belonging to a specific floorplan.
      *
      * @param floorplanId the ID of the floorplan

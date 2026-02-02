@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -125,6 +126,30 @@ public class DeskService {
         saveDesksFromFloorplan(floorplan);
 
         log.info("✅ Desks replaced for floorplan {}", floorplan.getId());
+    }
+
+    /**
+     * Get a desk by floorplan ID and desk ID.
+     * Returns the first desk if multiple exist (handles duplicate data gracefully).
+     *
+     * @param floorplanId the ID of the floorplan
+     * @param deskId the desk ID (e.g., "RT-8") from the floorplan
+     * @return Optional containing the desk document if found
+     */
+    public Optional<DeskDocument> getDeskByFloorplanAndDeskId(String floorplanId, String deskId) {
+        log.info("Fetching desk for floorplanId: {}, deskId: {}", floorplanId, deskId);
+        List<DeskDocument> desks = deskRepository.findAllByFloorplanIdAndDeskId(floorplanId, deskId);
+
+        if (desks.isEmpty()) {
+            return Optional.empty();
+        }
+
+        if (desks.size() > 1) {
+            log.warn("⚠️ Found {} desk documents for floorplanId: {}, deskId: {}. Using first one.",
+                    desks.size(), floorplanId, deskId);
+        }
+
+        return Optional.of(desks.get(0));
     }
 
     /**
