@@ -1,12 +1,6 @@
-import { useForm, useFormContext, type UseFormRegister } from "react-hook-form";
 import type { TemplateDesk } from "../types/floorplan.types";
 import { RegularDeskIcon } from "./RegularDesk";
 import { StandingDeskIcon } from "./StandingDesk";
-
-interface FloorplanFormData {
-  xLength: number;
-  yLength: number;
-}
 
 interface FloorplanToolbarProps {
   xLength: number;
@@ -43,7 +37,6 @@ export function FloorplanToolbar({
   onDownload,
   onUpload,
 }: FloorplanToolbarProps) {
-  const { register } = useFormContext();
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -71,11 +64,8 @@ export function FloorplanToolbar({
                 id="xLength"
                 min="1"
                 max="20"
-                {...register("xLength", {
-                  valueAsNumber: true,
-                  onChange: (e) =>
-                    onXLengthChange(parseInt(e.target.value) || 1),
-                })}
+                value={xLength}
+                onChange={(e) => onXLengthChange(parseInt(e.target.value) || 1)}
                 className="w-20 px-3 py-2 text-gray-900 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -91,11 +81,8 @@ export function FloorplanToolbar({
                 id="yLength"
                 min="1"
                 max="20"
-                {...register("yLength", {
-                  valueAsNumber: true,
-                  onChange: (e) =>
-                    onYLengthChange(parseInt(e.target.value) || 1),
-                })}
+                value={yLength}
+                onChange={(e) => onYLengthChange(parseInt(e.target.value) || 1)}
                 className="w-20 px-3 py-2 text-gray-900 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>

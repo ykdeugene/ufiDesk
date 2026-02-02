@@ -23,40 +23,29 @@ import { FormProvider, useForm } from "react-hook-form";
 import { Form } from "react-router";
 
 type FloorplanFormData = {
-  xLength: number;
-  yLength: number;
   floorplanName: string;
-  desks: {
-    id: string;
-    x: number;
-    y: number;
-    hasMonitor: boolean;
-    direction: Direction;
-    type: DeskType;
-  }[];
+  isMain: boolean;
 };
 
 export function UploadFloorplanPage() {
-  const uploadFloorplanForm = useForm<FloorplanFormData>({
-    mode: "onChange",
-    defaultValues: {
-      xLength: 10,
-      yLength: 10,
-      floorplanName: "",
-      desks: [],
-    },
-  });
-
-  const [isUploading, setIsUploading] = useState(false);
-  const [showSaveModal, setShowSaveModal] = useState(false);
-  const [selectedFloorplanId, setSelectedFloorplanId] = useState<string>("");
-
   const uploadFloorplan = useUploadFloorplan();
   const {
     data: allFloorplans,
     isLoading: isLoadingFloorplans,
     refetch: refetchFloorplans,
   } = useGetFloorplan();
+
+  const uploadFloorplanForm = useForm<FloorplanFormData>({
+    mode: "onChange",
+    defaultValues: {
+      floorplanName: "",
+      isMain: allFloorplans?.length === 0 ? true : false,
+    },
+  });
+
+  const [isUploading, setIsUploading] = useState(false);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [selectedFloorplanId, setSelectedFloorplanId] = useState<string>("");
 
   const { historyIndex, saveToHistory, handleUndo, applyUndo } =
     useFloorplanHistory();
@@ -93,15 +82,22 @@ export function UploadFloorplanPage() {
 
     if (!selectedFloorplan) return;
 
-    // Use current grid dimensions from FloorplanToolbar inputs (xLength, yLength)
-    // Create empty grid with current dimensions
-    const newGrid: typeof grid = Array.from({ length: yLength }, () =>
-      Array(xLength).fill(null),
+    // Update grid dimensions from selected floorplan
+    setXLength(selectedFloorplan.xLength);
+    setYLength(selectedFloorplan.yLength);
+
+    // Create empty grid with the floorplan's dimensions
+    const newGrid: typeof grid = Array.from(
+      { length: selectedFloorplan.yLength },
+      () => Array(selectedFloorplan.xLength).fill(null),
     );
 
     // Place desks in the grid at their coordinates
     selectedFloorplan.desks.forEach((desk) => {
-      if (desk.y < yLength && desk.x < xLength) {
+      if (
+        desk.y < selectedFloorplan.yLength &&
+        desk.x < selectedFloorplan.xLength
+      ) {
         newGrid[desk.y][desk.x] = {
           id: desk.id,
           x: desk.x,
@@ -113,11 +109,15 @@ export function UploadFloorplanPage() {
       }
     });
 
-    // Update grid state without changing dimensions
+    // Update grid state with new dimensions
     setGrid(newGrid);
-    saveToHistory(newGrid, xLength, yLength);
+    saveToHistory(
+      newGrid,
+      selectedFloorplan.xLength,
+      selectedFloorplan.yLength,
+    );
     toast.success(`Loaded floorplan: ${selectedFloorplan.name}`);
-  }, [selectedFloorplanId, allFloorplans, xLength, yLength]);
+  }, [selectedFloorplanId, allFloorplans]);
 
   const handleSave = () => {
     // Check if floorplan is empty before opening modal
@@ -183,8 +183,9 @@ export function UploadFloorplanPage() {
     }
     const payload = {
       name: data.floorplanName,
-      xLength: data.xLength,
-      yLength: data.yLength,
+      isMain: data.isMain,
+      xLength: xLength,
+      yLength: yLength,
       desks,
     };
 
@@ -196,11 +197,9 @@ export function UploadFloorplanPage() {
         toast.success(`Floor plan "${data.floorplanName}" saved successfully!`);
         setShowSaveModal(false);
         uploadFloorplanForm.reset({
-          xLength: data.xLength,
-          yLength: data.yLength,
           floorplanName: "",
         });
-        refetchFloorplans;
+        refetchFloorplans();
       },
       onError: (error) => {
         toast.error(
@@ -212,7 +211,7 @@ export function UploadFloorplanPage() {
 
   const handleSaveCancel = () => {
     setShowSaveModal(false);
-    uploadFloorplanForm.reset({ xLength, yLength, floorplanName: "" });
+    uploadFloorplanForm.reset({ floorplanName: "" });
   };
 
   const handleDownload = () => {
@@ -254,6 +253,11 @@ export function UploadFloorplanPage() {
       setYLength(previousState.yLength);
       applyUndo();
     }
+  };
+
+  const handleClearAllClick = () => {
+    handleClearAll();
+    setSelectedFloorplanId("");
   };
 
   return (
@@ -355,7 +359,7 @@ export function UploadFloorplanPage() {
               onXLengthChange={handleXLengthChange}
               onYLengthChange={handleYLengthChange}
               onUndo={handleUndoClick}
-              onClearAll={handleClearAll}
+              onClearAll={handleClearAllClick}
               onDragStart={handleDragStart}
               onSave={handleSave}
               onDownload={handleDownload}

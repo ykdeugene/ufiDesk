@@ -20,8 +20,8 @@ export interface Desk {
 export interface Floorplan {
   id: string;
   name: string;
-  xlength: number;
-  ylength: number;
+  xLength: number;
+  yLength: number;
   desks: Desk[];
   createdAt?: string;
   updatedAt?: string;
