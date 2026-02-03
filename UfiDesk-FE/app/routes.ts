@@ -5,6 +5,7 @@ const userPrefix = "user/";
 
 export default [
   index("routes/home.tsx"),
+  route("landing", "routes/landing-page.tsx"),
   route("login", "routes/login/login-page.tsx"),
   route(
     `${adminPrefix}user-management`,

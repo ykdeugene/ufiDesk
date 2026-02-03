@@ -50,14 +50,9 @@ export function Login() {
       });
       console.log("✅ Session data set in cache");
 
-      // Navigate based on admin boolean
-      if (result.admin === true) {
-        console.log("➡️ Navigating to admin page");
-        navigate("/admin/user-management");
-      } else {
-        console.log("➡️ Navigating to desk booking");
-        navigate("/user/desk-booking");
-      }
+      // Navigate to landing page
+      console.log("➡️ Navigating to landing page");
+      navigate("/landing");
     } catch (error) {
       console.error("❌ Login failed:", error);
       toast.error(error instanceof Error ? error.message : "Login failed");

@@ -26,12 +26,9 @@ export default function Home() {
     if (!sessionData) {
       console.log("  ➡️ No session, redirecting to login");
       navigate("/login", { replace: true });
-    } else if (sessionData.admin === true) {
-      console.log("  ➡️ Admin user, redirecting to user management");
-      navigate("/admin/user-management", { replace: true });
     } else {
-      console.log("  ➡️ Regular user, redirecting to desk booking");
-      navigate("/user/desk-booking", { replace: true });
+      console.log("  ➡️ Authenticated user, redirecting to landing page");
+      navigate("/landing", { replace: true });
     }
   }, [sessionData, isLoading, navigate]);
 
