@@ -5,6 +5,7 @@ import com.ufidesk.dto.LoginRequest;
 import com.ufidesk.dto.LoginResponse;
 import com.ufidesk.model.User;
 import com.ufidesk.security.CustomUserDetails;
+import com.ufidesk.service.NotificationService;
 import com.ufidesk.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -29,7 +30,8 @@ import java.util.Optional;
 public class AuthController {
     
     private final UserService userService;
-    
+    private final NotificationService notificationService;
+
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<LoginResponse>> login(@Valid @RequestBody LoginRequest loginRequest, 
                                    HttpServletRequest request) {
@@ -103,6 +105,9 @@ public class AuthController {
 
         log.info("✅ Login successful for user: {} (role: {}, admin: {})",
                 user.getEmail(), user.getRole(), user.isAdmin());
+
+        // Send any pending notifications to the user
+        notificationService.sendPendingNotificationsOnLogin(user.getEmail());
 
         LoginResponse response = new LoginResponse(
                 user.getEmail(),

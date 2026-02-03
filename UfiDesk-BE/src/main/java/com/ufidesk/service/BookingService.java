@@ -159,6 +159,50 @@ public class BookingService {
     }
 
     /**
+     * Get all active bookings that clash with block dates.
+     *
+     * @param floorplanId Floorplan ID
+     * @param deskId Desk ID
+     * @param blockStart Block start date
+     * @param blockEnd Block end date
+     * @return List of clashing bookings
+     */
+    public List<Booking> getClashingBookings(String floorplanId, String deskId,
+                                              java.time.LocalDate blockStart,
+                                              java.time.LocalDate blockEnd) {
+        log.info("Fetching clashing bookings for desk {} in floorplan {} with block dates {} to {}",
+                deskId, floorplanId, blockStart, blockEnd);
+
+        List<Booking> allBookings = getBookingsByFloorplanAndDesk(floorplanId, deskId);
+
+        List<Booking> clashingBookings = allBookings.stream()
+                .filter(booking -> booking.getStatus() == Booking.Status.ACTIVE)
+                .filter(booking -> doesBookingClashWithBlockDates(booking, blockStart, blockEnd))
+                .toList();
+
+        log.info("Found {} clashing bookings", clashingBookings.size());
+        return clashingBookings;
+    }
+
+    /**
+     * Check if a booking clashes with block dates.
+     * Block dates are always considered full day blocks.
+     *
+     * @param booking The booking to check
+     * @param blockStart Block start date
+     * @param blockEnd Block end date
+     * @return true if booking clashes with block dates, false otherwise
+     */
+    private boolean doesBookingClashWithBlockDates(Booking booking,
+                                                    java.time.LocalDate blockStart,
+                                                    java.time.LocalDate blockEnd) {
+        // Check if booking date range overlaps with block date range
+        // Block dates are always full day, so any overlap means clash
+        return booking.getStartDate().compareTo(blockEnd) <= 0 &&
+               booking.getEndDate().compareTo(blockStart) >= 0;
+    }
+
+    /**
      * Find all bookings for a specific floorplan
      *
      * @param floorplanId Floorplan ID
@@ -167,6 +211,23 @@ public class BookingService {
     public List<Booking> getBookingsByFloorplanId(String floorplanId) {
         log.info("Fetching bookings for floorplan: {}", floorplanId);
         return bookingRepository.findByFloorplanId(floorplanId);
+    }
+
+    /**
+     * Get a booking by its ID
+     *
+     * @param bookingId Booking ID
+     * @return Booking if found
+     * @throws IllegalArgumentException if booking not found
+     */
+    public Booking getBookingById(String bookingId) {
+        log.info("Fetching booking with ID: {}", bookingId);
+
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new IllegalArgumentException("Booking not found: " + bookingId));
+
+        log.info("✅ Retrieved booking: {}", bookingId);
+        return booking;
     }
 
     /**
@@ -189,6 +250,29 @@ public class BookingService {
         log.info("✅ Successfully cancelled booking: {}", bookingId);
 
         return savedBooking;
+    }
+
+    /**
+     * Cancel multiple bookings by setting their status to CANCELLED
+     *
+     * @param bookingIds List of booking IDs to cancel
+     * @return List of updated bookings
+     */
+    public List<Booking> cancelMultipleBookings(List<String> bookingIds) {
+        log.info("Cancelling {} bookings", bookingIds.size());
+
+        List<Booking> bookingsToCancel = bookingRepository.findAllById(bookingIds);
+        LocalDateTime now = LocalDateTime.now();
+
+        for (Booking booking : bookingsToCancel) {
+            booking.setStatus(Booking.Status.CANCELLED);
+            booking.setUpdatedAt(now);
+        }
+
+        List<Booking> cancelledBookings = bookingRepository.saveAll(bookingsToCancel);
+        log.info("✅ Successfully cancelled {} bookings", cancelledBookings.size());
+
+        return cancelledBookings;
     }
 
     /**

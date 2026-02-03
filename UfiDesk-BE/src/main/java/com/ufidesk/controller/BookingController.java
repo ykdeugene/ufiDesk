@@ -131,6 +131,7 @@ public class BookingController {
         }
     }
 
+
     /**
      * Cancel a booking by setting its status to CANCELLED.
      *
