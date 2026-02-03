@@ -14,6 +14,8 @@ import { Navbar } from "./components/navbar/navbar";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./api/queryClient";
 import { ClientToastContainer } from "./components/ClientToastContainer";
+import { useNotificationSSE } from "./api/hooks/useNotification";
+import { useNotificationStore } from "./stores/notificationStore";
 
 // root.tsx
 export const links: Route.LinksFunction = () => [
@@ -53,6 +55,24 @@ export function Layout({ children }: { children: React.ReactNode }) {
 export default function App() {
   const location = useLocation();
   const isLoginPage = location.pathname === "/login";
+  const addNotification = useNotificationStore(
+    (state) => state.addNotification,
+  );
+
+  // Connect to SSE notifications when not on login page
+  useNotificationSSE(
+    (event) => {
+      try {
+        const notification = JSON.parse(event.data);
+        console.log("Notification received:", notification);
+        // Add notification to store
+        addNotification(notification);
+      } catch (error) {
+        console.error("Failed to parse notification:", error);
+      }
+    },
+    !isLoginPage, // Only enable when logged in (not on login page)
+  );
 
   return (
     <QueryClientProvider client={queryClient}>

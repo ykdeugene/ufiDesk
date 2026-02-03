@@ -6,6 +6,7 @@ export {
   useUpdateUser,
   adminKeys,
 } from "./useAdmin";
+export { useUpdateProfile } from "./useUser";
 export {
   useGetFloorplan,
   useGetMainFloorplan,
@@ -16,5 +17,6 @@ export {
 export {
   useGetDesksByMainFloorplan as useGetDesksByFloorplan,
   useUpdateDeskDetails,
+  useCheckForClash,
   deskKeys,
 } from "./useDesk";

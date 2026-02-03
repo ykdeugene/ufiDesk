@@ -15,3 +15,15 @@ export interface SessionStatus {
   role: string;
   message: string;
 }
+
+export interface UserProfileUpdateRequest {
+  email: string;
+  password?: string;
+  updateTime: string;
+}
+
+export interface UserDto {
+  email: string;
+  admin: boolean;
+  active: boolean;
+}

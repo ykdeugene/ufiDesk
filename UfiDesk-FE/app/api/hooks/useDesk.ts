@@ -1,5 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiClient } from "../client";
+import type { Booking } from "./useBooking";
 
 // Query Keys
 export const deskKeys = {
@@ -61,6 +62,27 @@ export function useUpdateDeskDetails() {
 
       if (!response.success) {
         throw new Error(response.message || "Failed to update desk details");
+      }
+
+      return response.data;
+    },
+  });
+}
+
+/**
+ * Hook for checking booking clashes
+ * POST /desk/check-for-clash
+ */
+export function useCheckForClash() {
+  return useMutation({
+    mutationFn: async (request: UpdateDeskDetailsRequest) => {
+      const response = await apiClient.post<Booking[]>(
+        "/desk/check-for-clash",
+        request,
+      );
+
+      if (!response.success) {
+        throw new Error(response.message || "Failed to check for clashes");
       }
 
       return response.data;
