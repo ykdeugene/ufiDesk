@@ -90,3 +90,29 @@ export function useGetAllActiveBookings() {
     },
   });
 }
+
+/**
+ * Hook for deleting a booking
+ * DELETE /booking/delete-booking/{bookingId}
+ */
+export function useDeleteBooking() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (bookingId: string) => {
+      const response = await apiClient.delete<void>(
+        `/booking/delete-booking/${bookingId}`,
+      );
+
+      if (!response.success) {
+        throw new Error(response.message || "Failed to delete booking");
+      }
+
+      return response;
+    },
+    onSuccess: () => {
+      // Invalidate booking queries to refetch updated data
+      queryClient.invalidateQueries({ queryKey: bookingKeys.all });
+    },
+  });
+}

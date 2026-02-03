@@ -6,6 +6,7 @@ import {
   useUploadFloorplan,
   useSetMainFloorplan,
 } from "~/api/hooks";
+import { ProtectedRoute } from "~/components/ProtectedRoute";
 import { FloorplanGrid } from "./components/FloorplanGrid";
 import { FloorplanToolbar } from "./components/FloorplanToolbar";
 import {
@@ -32,6 +33,14 @@ type FloorplanFormData = {
 };
 
 export function UploadFloorplanPage() {
+  return (
+    <ProtectedRoute requiredRole="admin">
+      <UploadFloorplanContent />
+    </ProtectedRoute>
+  );
+}
+
+function UploadFloorplanContent() {
   const uploadFloorplan = useUploadFloorplan();
   const setMainFloorplan = useSetMainFloorplan();
   const {

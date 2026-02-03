@@ -7,12 +7,14 @@ export interface LoginRequest {
 export interface LoginResponse {
   email: string;
   role: string;
+  admin: boolean;
   message: string;
 }
 
 export interface SessionStatus {
   email: string;
   role: string;
+  admin: boolean;
   message: string;
 }
 

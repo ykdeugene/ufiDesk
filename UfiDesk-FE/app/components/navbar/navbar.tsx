@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate, useLocation } from "react-router";
 import { toast } from "react-toastify";
@@ -24,6 +24,10 @@ export function Navbar() {
     useState<Notification | null>(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
+  // Refs for click-outside detection
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const notificationRef = useRef<HTMLDivElement>(null);
+
   const { data: sessionData } = useSessionStatus();
   const {
     register,
@@ -48,8 +52,32 @@ export function Navbar() {
     { label: "Desk Booking", path: "/user/desk-booking" },
   ];
 
+  // Filter nav items based on user role
+  const isAdmin = sessionData?.admin === true;
+
+  // Debug logging
+  console.log("🔍 Navbar Debug:");
+  console.log("  Session Data:", sessionData);
+  console.log("  User Email:", sessionData?.email);
+  console.log("  User Role:", sessionData?.role);
+  console.log("  Is Admin (boolean):", sessionData?.admin);
+  console.log("  Is Admin (computed):", isAdmin);
+  const filteredNavItems = navItems.filter((item) => {
+    // Show admin routes only if user is admin
+    if (item.path.startsWith("/admin")) {
+      return isAdmin;
+    }
+    // Show all other routes to everyone
+    return true;
+  });
+
+  console.log(
+    "  Filtered Nav Items:",
+    filteredNavItems.map((i) => i.label),
+  );
+
   // Sort nav items alphabetically
-  const sortedNavItems = [...navItems].sort((a, b) =>
+  const sortedNavItems = [...filteredNavItems].sort((a, b) =>
     a.label.localeCompare(b.label),
   );
 
@@ -116,6 +144,37 @@ export function Navbar() {
     );
   });
 
+  // Click-outside handler for dropdowns
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      // Close user dropdown if clicked outside
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsDropdownOpen(false);
+      }
+
+      // Close notification dropdown if clicked outside
+      if (
+        notificationRef.current &&
+        !notificationRef.current.contains(event.target as Node)
+      ) {
+        setIsNotificationOpen(false);
+      }
+    };
+
+    // Add event listener when either dropdown is open
+    if (isDropdownOpen || isNotificationOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    // Cleanup
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isDropdownOpen, isNotificationOpen]);
+
   const unreadCount = notifications.filter(
     (notif) => !notif.notifiedStatus,
   ).length;
@@ -144,7 +203,7 @@ export function Navbar() {
           {/* Right side - Notifications & User Dropdown */}
           <div className="flex items-center gap-3">
             {/* Notification Bell */}
-            <div className="relative">
+            <div className="relative" ref={notificationRef}>
               <button
                 onClick={() => setIsNotificationOpen(!isNotificationOpen)}
                 className="relative p-2 text-black hover:bg-gray-100 rounded-full transition-colors"
@@ -222,7 +281,7 @@ export function Navbar() {
             </div>
 
             {/* Username with Dropdown */}
-            <div className="relative">
+            <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                 className="flex items-center gap-2 bg-gray-100 text-black px-4 py-2 rounded hover:bg-gray-200 transition-colors"

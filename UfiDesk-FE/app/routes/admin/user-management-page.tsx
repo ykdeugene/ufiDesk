@@ -1,6 +1,10 @@
 import { useState, useEffect } from "react";
 import { useGetUsers, useCreateUser, useUpdateUser } from "~/api/hooks";
 import { toast } from "react-toastify";
+import { ProtectedRoute } from "~/components/ProtectedRoute";
+
+const SUPER_ADMIN_EMAIL =
+  import.meta.env.VITE_SUPER_ADMIN_EMAIL || "superadmin@ufidesk.com";
 
 interface User {
   email: string;
@@ -9,6 +13,14 @@ interface User {
 }
 
 export function UserManagementPage() {
+  return (
+    <ProtectedRoute requiredRole="admin">
+      <UserManagementContent />
+    </ProtectedRoute>
+  );
+}
+
+function UserManagementContent() {
   const { data: users = [], isLoading, error } = useGetUsers();
 
   const createUserMutation = useCreateUser();
@@ -249,13 +261,22 @@ export function UserManagementPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, admin: e.target.checked })
                   }
-                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  disabled={
+                    !isCreateMode && selectedUser?.email === SUPER_ADMIN_EMAIL
+                  }
+                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 <label
                   htmlFor="admin"
                   className="ml-2 text-sm font-medium text-gray-700"
                 >
                   Admin Role
+                  {!isCreateMode &&
+                    selectedUser?.email === SUPER_ADMIN_EMAIL && (
+                      <span className="ml-2 text-xs text-gray-500 italic">
+                        (protected)
+                      </span>
+                    )}
                 </label>
               </div>
 
@@ -267,13 +288,22 @@ export function UserManagementPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, active: e.target.checked })
                   }
-                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  disabled={
+                    !isCreateMode && selectedUser?.email === SUPER_ADMIN_EMAIL
+                  }
+                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 <label
                   htmlFor="active"
                   className="ml-2 text-sm font-medium text-gray-700"
                 >
                   Account Active
+                  {!isCreateMode &&
+                    selectedUser?.email === SUPER_ADMIN_EMAIL && (
+                      <span className="ml-2 text-xs text-gray-500 italic">
+                        (protected)
+                      </span>
+                    )}
                 </label>
               </div>
 

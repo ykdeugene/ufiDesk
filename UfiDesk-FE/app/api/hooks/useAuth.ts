@@ -58,10 +58,6 @@ export function useLogin() {
 
       return response.data;
     },
-    onSuccess: (data) => {
-      // Invalidate and refetch session query on successful login
-      queryClient.invalidateQueries({ queryKey: authKeys.session() });
-    },
     onError: (error: Error) => {
       console.error("Login failed:", error.message);
     },

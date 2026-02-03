@@ -1,30 +1,47 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import { useGetMainFloorplan, useGetDesksByFloorplan } from "~/api/hooks";
+import { ProtectedRoute } from "~/components/ProtectedRoute";
 import { FloorplanGrid } from "~/components/FloorplanGrid";
 import type { Desk } from "~/api/hooks/useFloorplan";
 import {
   useCreateBooking,
   useGetAllActiveBookings,
+  useDeleteBooking,
   Period,
 } from "~/api/hooks/useBooking";
+import { useSessionStatus } from "~/api/hooks/useAuth";
 import { toast } from "react-toastify";
 
 export function DeskBooking() {
+  return (
+    <ProtectedRoute>
+      <DeskBookingContent />
+    </ProtectedRoute>
+  );
+}
+
+function DeskBookingContent() {
   const { data: mainFloorplan, isLoading, error } = useGetMainFloorplan();
   const { data: desksData } = useGetDesksByFloorplan();
   const { data: bookingsData } = useGetAllActiveBookings();
+  const { data: sessionData } = useSessionStatus();
   const createBooking = useCreateBooking();
+  const deleteBooking = useDeleteBooking();
   const [selectedDesks, setSelectedDesks] = useState<Desk[]>([]);
   const [showIcons, setShowIcons] = useState(true);
   const [eventDescription, setEventDescription] = useState<{
     type: "blocked" | "booking";
     description: string;
     userEmail?: string;
+    startDate?: string;
+    endDate?: string;
+    startPeriod?: string;
+    endPeriod?: string;
   } | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalData, setModalData] = useState<{
@@ -34,6 +51,14 @@ export function DeskBooking() {
   } | null>(null);
   const [startPeriod, setStartPeriod] = useState<"AM" | "PM">("AM");
   const [endPeriod, setEndPeriod] = useState<"AM" | "PM">("PM");
+  const [contextMenu, setContextMenu] = useState<{
+    visible: boolean;
+    x: number;
+    y: number;
+    bookingId: string;
+    userEmail: string;
+  } | null>(null);
+  const contextMenuRef = useRef<HTMLDivElement>(null);
 
   const { register, handleSubmit, reset, setValue } = useForm<{
     startDate: string;
@@ -51,6 +76,40 @@ export function DeskBooking() {
       setEndPeriod("PM");
     }
   }, [isModalOpen, modalData, setValue]);
+
+  // Close context menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        contextMenuRef.current &&
+        !contextMenuRef.current.contains(event.target as Node)
+      ) {
+        setContextMenu(null);
+      }
+    };
+
+    if (contextMenu?.visible) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+      };
+    }
+  }, [contextMenu]);
+
+  const handleDeleteBooking = async () => {
+    if (!contextMenu?.bookingId) return;
+
+    try {
+      await deleteBooking.mutateAsync(contextMenu.bookingId);
+      toast.success("Booking deleted successfully!");
+      setContextMenu(null);
+      setEventDescription(null);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to delete booking",
+      );
+    }
+  };
 
   const onSubmit = async (data: {
     startDate: string;
@@ -216,6 +275,7 @@ export function DeskBooking() {
             type: "booking",
             startPeriod: booking.startPeriod,
             endPeriod: booking.endPeriod,
+            bookingId: booking.id,
           },
         });
       });
@@ -288,13 +348,51 @@ export function DeskBooking() {
                   right: "",
                 }}
                 events={calendarEvents}
-                eventClick={(info) => {
-                  const { description, type, userEmail } =
+                eventDidMount={(info) => {
+                  const { type, userEmail, bookingId } =
                     info.event.extendedProps;
+
+                  // Add right-click handler for all bookings
+                  if (type === "booking" && bookingId) {
+                    info.el.addEventListener("contextmenu", (e) => {
+                      e.preventDefault();
+                      setContextMenu({
+                        visible: true,
+                        x: e.pageX,
+                        y: e.pageY,
+                        bookingId,
+                        userEmail: userEmail || "",
+                      });
+                    });
+                  }
+                }}
+                eventClick={(info) => {
+                  const {
+                    description,
+                    type,
+                    userEmail,
+                    startPeriod,
+                    endPeriod,
+                  } = info.event.extendedProps;
+
+                  // Format dates to YYYY-MM-DD
+                  const startDate = info.event.start
+                    ? info.event.start.toISOString().split("T")[0]
+                    : undefined;
+                  const endDate = info.event.end
+                    ? new Date(info.event.end.getTime() - 24 * 60 * 60 * 1000)
+                        .toISOString()
+                        .split("T")[0]
+                    : undefined;
+
                   setEventDescription({
                     type: type as "blocked" | "booking",
                     description: description || "No description provided",
                     userEmail,
+                    startDate,
+                    endDate,
+                    startPeriod,
+                    endPeriod,
                   });
                 }}
                 select={handleDateSelect}
@@ -324,6 +422,41 @@ export function DeskBooking() {
                         ? "Block Details"
                         : "Booking Details"}
                     </h3>
+
+                    {(eventDescription.startDate ||
+                      eventDescription.endDate) && (
+                      <div className="flex gap-4 mb-2">
+                        {eventDescription.startDate && (
+                          <div>
+                            <span className="text-xs font-medium text-gray-600">
+                              Start Date:{" "}
+                            </span>
+                            <span className="text-sm text-gray-700">
+                              {new Date(
+                                eventDescription.startDate,
+                              ).toLocaleDateString()}
+                              {eventDescription.startPeriod &&
+                                ` (${eventDescription.startPeriod})`}
+                            </span>
+                          </div>
+                        )}
+
+                        {eventDescription.endDate && (
+                          <div>
+                            <span className="text-xs font-medium text-gray-600">
+                              End Date:{" "}
+                            </span>
+                            <span className="text-sm text-gray-700">
+                              {new Date(
+                                eventDescription.endDate,
+                              ).toLocaleDateString()}
+                              {eventDescription.endPeriod &&
+                                ` (${eventDescription.endPeriod})`}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     <div className="mb-2">
                       <span className="text-xs font-medium text-gray-600">
@@ -510,6 +643,42 @@ export function DeskBooking() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Context Menu for Deleting Bookings */}
+      {contextMenu?.visible && (
+        <div
+          ref={contextMenuRef}
+          className="fixed bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-50"
+          style={{
+            left: `${contextMenu.x}px`,
+            top: `${contextMenu.y}px`,
+          }}
+        >
+          <button
+            onClick={handleDeleteBooking}
+            disabled={
+              deleteBooking.isPending ||
+              contextMenu.userEmail !== sessionData?.email
+            }
+            className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+              />
+            </svg>
+            {deleteBooking.isPending ? "Deleting..." : "Delete Booking"}
+          </button>
         </div>
       )}
     </div>

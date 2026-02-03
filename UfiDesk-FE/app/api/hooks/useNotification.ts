@@ -55,20 +55,25 @@ export function useNotificationSSE(
 
     // Handle connection open
     eventSource.onopen = () => {
-      console.log("SSE connected successfully");
+      console.log("✅ SSE connection opened");
       setIsConnected(true);
       setError(null);
     };
 
-    // Listen for 'notification' event type (not default message)
+    // Listen for 'connect' event (initial connection confirmation from backend)
+    eventSource.addEventListener("connect", (event) => {
+      console.log("✅ SSE connection confirmed by server:", event.data);
+    });
+
+    // Listen for 'notification' event type
     eventSource.addEventListener("notification", (event) => {
-      console.log("Notification event received:", event);
+      console.log("📬 Notification event received:", event);
       onMessageRef.current(event);
     });
 
-    // Also listen to default messages (just in case)
+    // Also listen to default messages (fallback)
     eventSource.onmessage = (event) => {
-      console.log("Default message received:", event);
+      console.log("📨 Default message received:", event);
       onMessageRef.current(event);
     };
 

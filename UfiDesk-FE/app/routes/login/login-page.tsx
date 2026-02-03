@@ -1,7 +1,9 @@
 import { useNavigate } from "react-router";
 import { useForm } from "react-hook-form";
-import { useLogin } from "~/api/hooks";
+import { useLogin, useSessionStatus } from "~/api/hooks";
 import { toast } from "react-toastify";
+import { useQueryClient } from "@tanstack/react-query";
+import { authKeys } from "~/api/hooks/useAuth";
 
 interface LoginFormData {
   email: string;
@@ -11,6 +13,7 @@ interface LoginFormData {
 export function Login() {
   const navigate = useNavigate();
   const loginMutation = useLogin();
+  const queryClient = useQueryClient();
   const {
     register,
     handleSubmit,
@@ -29,9 +32,34 @@ export function Login() {
         email: data.email,
         password: data.password,
       });
+
+      console.log("🔐 Login successful!");
+      console.log("📧 Email:", result.email);
+      console.log("👤 Role:", result.role);
+      console.log("🔑 Is Admin:", result.admin);
+      console.log("📦 Full login response:", result);
+
       toast.success(`Welcome, ${result.email}!`);
-      navigate("/admin/user-management");
+
+      // Directly set the session data in the cache with admin field
+      queryClient.setQueryData(authKeys.session(), {
+        email: result.email,
+        role: result.role,
+        admin: result.admin,
+        message: result.message,
+      });
+      console.log("✅ Session data set in cache");
+
+      // Navigate based on admin boolean
+      if (result.admin === true) {
+        console.log("➡️ Navigating to admin page");
+        navigate("/admin/user-management");
+      } else {
+        console.log("➡️ Navigating to desk booking");
+        navigate("/user/desk-booking");
+      }
     } catch (error) {
+      console.error("❌ Login failed:", error);
       toast.error(error instanceof Error ? error.message : "Login failed");
     }
   };

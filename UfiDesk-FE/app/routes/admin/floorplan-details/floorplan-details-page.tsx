@@ -7,6 +7,7 @@ import {
   useUpdateDeskDetails,
   useCheckForClash,
 } from "~/api/hooks";
+import { ProtectedRoute } from "~/components/ProtectedRoute";
 import { FloorplanGrid } from "~/components/FloorplanGrid";
 import type { Desk } from "~/api/hooks/useFloorplan";
 import type { Booking } from "~/api/hooks/useBooking";
@@ -21,6 +22,14 @@ interface DeskDetailsFormData {
 type ModalType = "create" | "edit" | "delete" | "clash-confirmation" | null;
 
 export function FloorplanDetails() {
+  return (
+    <ProtectedRoute requiredRole="admin">
+      <FloorplanDetailsContent />
+    </ProtectedRoute>
+  );
+}
+
+function FloorplanDetailsContent() {
   const { data: mainFloorplan, isLoading, error } = useGetMainFloorplan();
   const { data: desksData, refetch: refetchDesks } = useGetDesksByFloorplan();
   const updateDeskDetails = useUpdateDeskDetails();
@@ -103,35 +112,33 @@ export function FloorplanDetails() {
 
   const onSubmit = async (data: DeskDetailsFormData) => {
     try {
-      if (modalType === "create") {
-        // Check for clashes when creating
-        const clashes = await checkForClash.mutateAsync({
-          deskId: data.deskId,
-          description: data.description,
-          blockStart: data.blockStart || null,
-          blockEnd: data.blockEnd || null,
-        });
+      // Check for clashes for both create and edit modes
+      const clashes = await checkForClash.mutateAsync({
+        deskId: data.deskId,
+        description: data.description,
+        blockStart: data.blockStart || null,
+        blockEnd: data.blockEnd || null,
+      });
 
-        if (clashes && clashes.length > 0) {
-          // Store the data and show clash confirmation modal
-          setPendingBlockingData(data);
-          setClashingBookings(clashes);
-          setModalType("clash-confirmation");
-        } else {
+      if (clashes && clashes.length > 0) {
+        // Store the data and show clash confirmation modal
+        setPendingBlockingData(data);
+        setClashingBookings(clashes);
+        setModalType("clash-confirmation");
+      } else {
+        if (modalType === "create") {
           // No clashes, backend already created the blocking
           toast.success("Blocking created successfully");
-          setModalType(null);
-          refetchDesks();
+        } else {
+          // Edit mode - update the blocking
+          await updateDeskDetails.mutateAsync({
+            deskId: data.deskId,
+            description: data.description,
+            blockStart: data.blockStart || null,
+            blockEnd: data.blockEnd || null,
+          });
+          toast.success("Blocking updated successfully");
         }
-      } else {
-        // Edit mode - directly update
-        await updateDeskDetails.mutateAsync({
-          deskId: data.deskId,
-          description: data.description,
-          blockStart: data.blockStart || null,
-          blockEnd: data.blockEnd || null,
-        });
-        toast.success("Blocking updated successfully");
         setModalType(null);
         refetchDesks();
       }
@@ -413,7 +420,13 @@ export function FloorplanDetails() {
                           Start Date
                         </th>
                         <th className="px-3 py-2 text-left text-gray-700 font-medium">
+                          Start Period
+                        </th>
+                        <th className="px-3 py-2 text-left text-gray-700 font-medium">
                           End Date
+                        </th>
+                        <th className="px-3 py-2 text-left text-gray-700 font-medium">
+                          End Period
                         </th>
                       </tr>
                     </thead>
@@ -440,6 +453,9 @@ export function FloorplanDetails() {
                             )}
                           </td>
                           <td className="px-3 py-2 text-gray-800">
+                            {booking.startPeriod}
+                          </td>
+                          <td className="px-3 py-2 text-gray-800">
                             {new Date(booking.endDate).toLocaleDateString(
                               "en-GB",
                               {
@@ -448,6 +464,9 @@ export function FloorplanDetails() {
                                 year: "numeric",
                               },
                             )}
+                          </td>
+                          <td className="px-3 py-2 text-gray-800">
+                            {booking.endPeriod}
                           </td>
                         </tr>
                       ))}
