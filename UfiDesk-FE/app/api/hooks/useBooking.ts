@@ -93,14 +93,14 @@ export function useGetAllActiveBookings() {
 
 /**
  * Hook for deleting a booking
- * DELETE /booking/delete-booking/{bookingId}
+ * POST /booking/delete-booking/{bookingId}
  */
 export function useDeleteBooking() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (bookingId: string) => {
-      const response = await apiClient.delete<void>(
+      const response = await apiClient.post<void>(
         `/booking/delete-booking/${bookingId}`,
       );
 
