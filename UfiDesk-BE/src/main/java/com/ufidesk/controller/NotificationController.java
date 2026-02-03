@@ -23,8 +23,7 @@ import java.util.List;
  *
  * Endpoints:
  * - GET /notification/notif-sse - Subscribe to real-time notifications via SSE
- * - GET /notification/get-all - Get all notifications for the authenticated user
- * - GET /notification/get-unnotified - Get all unnotified notifications for the user
+ * - POST /notification/acknowledge/{notificationId} - Acknowledge/mark notification as read
  */
 @RestController
 @RequestMapping("/notification")
@@ -133,43 +132,6 @@ public class NotificationController {
         return emitter;
     }
 
-    /**
-     * Get all notifications for the authenticated user.
-     *
-     * @return List of all notifications for the user with booking objects
-     */
-    @PreAuthorize("isAuthenticated()")
-    @GetMapping("/get-all")
-    public ResponseEntity<ApiResponse<List<NotificationResponse>>> getAllNotifications() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String userEmail = authentication.getName();
-
-        log.info("Fetching all notifications for user: {}", userEmail);
-
-        List<Notification> notifications = notificationService.getNotificationsByEmail(userEmail);
-        List<NotificationResponse> notificationResponses = notificationService.convertToNotificationResponses(notifications);
-
-        return ResponseEntity.ok(ApiResponse.success("Notifications retrieved successfully", notificationResponses));
-    }
-
-    /**
-     * Get all unnotified notifications for the authenticated user.
-     *
-     * @return List of unnotified notifications for the user with booking objects
-     */
-    @PreAuthorize("isAuthenticated()")
-    @GetMapping("/get-unnotified")
-    public ResponseEntity<ApiResponse<List<NotificationResponse>>> getUnnotifiedNotifications() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String userEmail = authentication.getName();
-
-        log.info("Fetching unnotified notifications for user: {}", userEmail);
-
-        List<Notification> notifications = notificationService.getUnnotifiedNotificationsByEmail(userEmail);
-        List<NotificationResponse> notificationResponses = notificationService.convertToNotificationResponses(notifications);
-
-        return ResponseEntity.ok(ApiResponse.success("Unnotified notifications retrieved successfully", notificationResponses));
-    }
 
     /**
      * Mark a notification as notified/acknowledged.
