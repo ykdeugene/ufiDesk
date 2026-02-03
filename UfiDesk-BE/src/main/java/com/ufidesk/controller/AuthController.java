@@ -112,6 +112,7 @@ public class AuthController {
         LoginResponse response = new LoginResponse(
                 user.getEmail(),
                 user.getRole(),
+                user.isAdmin(),
                 "Login successful"
         );
         
@@ -137,6 +138,7 @@ public class AuthController {
             LoginResponse response = new LoginResponse(
                     (String) session.getAttribute("email"),
                     (String) session.getAttribute("role"),
+                    (Boolean) session.getAttribute("admin"),
                     "Session active"
             );
             return ResponseEntity.ok(ApiResponse.success("Session active", response));

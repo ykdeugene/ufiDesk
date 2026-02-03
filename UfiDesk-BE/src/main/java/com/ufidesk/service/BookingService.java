@@ -1,8 +1,10 @@
 package com.ufidesk.service;
 
+import com.ufidesk.model.ArchiveBooking;
 import com.ufidesk.model.Booking;
 import com.ufidesk.model.DeskDocument;
 import com.ufidesk.model.Floorplan;
+import com.ufidesk.repository.ArchiveBookingRepository;
 import com.ufidesk.repository.BookingRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,6 +30,7 @@ import java.util.Optional;
 public class BookingService {
 
     private final BookingRepository bookingRepository;
+    private final ArchiveBookingRepository archiveBookingRepository;
     private final FloorplanService floorplanService;
     private final DeskService deskService;
 
@@ -231,48 +234,140 @@ public class BookingService {
     }
 
     /**
-     * Cancel a booking by setting its status to CANCELLED
+     * Cancel a booking by archiving it and removing it from the bookings collection.
+     *
+     * This method:
+     * 1. Fetches the booking from the bookings collection
+     * 2. Converts it to an ArchiveBooking and saves it to the archiveBookings collection
+     * 3. Deletes the booking from the bookings collection
      *
      * @param bookingId Booking ID
-     * @return Updated booking
+     * @return ArchiveBooking - the archived booking
      * @throws IllegalArgumentException if booking not found
      */
-    public Booking cancelBooking(String bookingId) {
-        log.info("Cancelling booking: {}", bookingId);
+    public ArchiveBooking cancelBooking(String bookingId) {
+        log.info("Cancelling and archiving booking: {}", bookingId);
 
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new IllegalArgumentException("Booking not found: " + bookingId));
 
+        // Set status to CANCELLED before archiving
         booking.setStatus(Booking.Status.CANCELLED);
         booking.setUpdatedAt(LocalDateTime.now());
 
-        Booking savedBooking = bookingRepository.save(booking);
-        log.info("✅ Successfully cancelled booking: {}", bookingId);
+        // Convert to ArchiveBooking and save to archive collection
+        ArchiveBooking archivedBooking = ArchiveBooking.fromBooking(booking);
+        ArchiveBooking savedArchivedBooking = archiveBookingRepository.save(archivedBooking);
+        log.info("✅ Booking archived: {}", bookingId);
 
-        return savedBooking;
+        // Delete from bookings collection
+        bookingRepository.deleteById(bookingId);
+        log.info("✅ Booking deleted from active bookings: {}", bookingId);
+
+        return savedArchivedBooking;
     }
 
     /**
-     * Cancel multiple bookings by setting their status to CANCELLED
+     * Cancel multiple bookings by archiving them and removing from the bookings collection.
+     *
+     * This method:
+     * 1. Fetches all bookings from the bookings collection
+     * 2. Converts them to ArchiveBookings and saves them to the archiveBookings collection
+     * 3. Deletes all bookings from the bookings collection
      *
      * @param bookingIds List of booking IDs to cancel
-     * @return List of updated bookings
+     * @return List of ArchiveBookings - the archived bookings
      */
-    public List<Booking> cancelMultipleBookings(List<String> bookingIds) {
-        log.info("Cancelling {} bookings", bookingIds.size());
+    public List<ArchiveBooking> cancelMultipleBookings(List<String> bookingIds) {
+        log.info("Cancelling and archiving {} bookings", bookingIds.size());
 
         List<Booking> bookingsToCancel = bookingRepository.findAllById(bookingIds);
         LocalDateTime now = LocalDateTime.now();
 
+        // Set status to CANCELLED for all bookings
         for (Booking booking : bookingsToCancel) {
             booking.setStatus(Booking.Status.CANCELLED);
             booking.setUpdatedAt(now);
         }
 
-        List<Booking> cancelledBookings = bookingRepository.saveAll(bookingsToCancel);
-        log.info("✅ Successfully cancelled {} bookings", cancelledBookings.size());
+        // Convert to ArchiveBookings and save to archive collection
+        List<ArchiveBooking> archiveBookings = new ArrayList<>();
+        for (Booking booking : bookingsToCancel) {
+            ArchiveBooking archivedBooking = ArchiveBooking.fromBooking(booking);
+            archiveBookings.add(archivedBooking);
+        }
 
-        return cancelledBookings;
+        List<ArchiveBooking> savedArchiveBookings = archiveBookingRepository.saveAll(archiveBookings);
+        log.info("✅ {} bookings archived", savedArchiveBookings.size());
+
+        // Delete all from bookings collection
+        bookingRepository.deleteAllById(bookingIds);
+        log.info("✅ {} bookings deleted from active bookings", bookingIds.size());
+
+        return savedArchiveBookings;
+    }
+
+    // ===== Archive Booking Methods =====
+
+    /**
+     * Get all archived bookings
+     *
+     * @return List of all archived bookings
+     */
+    public List<ArchiveBooking> getAllArchivedBookings() {
+        log.info("Fetching all archived bookings");
+        return archiveBookingRepository.findAll();
+    }
+
+    /**
+     * Get archived bookings for a specific user
+     *
+     * @param userEmail User email
+     * @return List of archived bookings for the user
+     */
+    public List<ArchiveBooking> getArchivedBookingsByUserEmail(String userEmail) {
+        log.info("Fetching archived bookings for user: {}", userEmail);
+        return archiveBookingRepository.findByUserEmail(userEmail);
+    }
+
+    /**
+     * Get archived bookings for a specific floorplan
+     *
+     * @param floorplanId Floorplan ID
+     * @return List of archived bookings for the floorplan
+     */
+    public List<ArchiveBooking> getArchivedBookingsByFloorplanId(String floorplanId) {
+        log.info("Fetching archived bookings for floorplan: {}", floorplanId);
+        return archiveBookingRepository.findByFloorplanId(floorplanId);
+    }
+
+    /**
+     * Get archived bookings for a specific desk within a floorplan
+     *
+     * @param floorplanId Floorplan ID
+     * @param deskId Desk ID
+     * @return List of archived bookings for the desk
+     */
+    public List<ArchiveBooking> getArchivedBookingsByFloorplanAndDesk(String floorplanId, String deskId) {
+        log.info("Fetching archived bookings for desk {} in floorplan {}", deskId, floorplanId);
+        return archiveBookingRepository.findByFloorplanIdAndDeskId(floorplanId, deskId);
+    }
+
+    /**
+     * Get an archived booking by its ID
+     *
+     * @param archivedBookingId Archived booking ID
+     * @return ArchiveBooking if found
+     * @throws IllegalArgumentException if archived booking not found
+     */
+    public ArchiveBooking getArchivedBookingById(String archivedBookingId) {
+        log.info("Fetching archived booking with ID: {}", archivedBookingId);
+
+        ArchiveBooking archiveBooking = archiveBookingRepository.findById(archivedBookingId)
+                .orElseThrow(() -> new IllegalArgumentException("Archived booking not found: " + archivedBookingId));
+
+        log.info("✅ Retrieved archived booking: {}", archivedBookingId);
+        return archiveBooking;
     }
 
     /**

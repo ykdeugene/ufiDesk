@@ -1,6 +1,7 @@
 package com.ufidesk.service;
 
 import com.ufidesk.dto.NotificationResponse;
+import com.ufidesk.model.ArchiveBooking;
 import com.ufidesk.model.Booking;
 import com.ufidesk.model.Notification;
 import com.ufidesk.repository.NotificationRepository;
@@ -189,13 +190,21 @@ public class NotificationService {
         if (emitter != null) {
             try {
                 log.info("Sending notification {} to connected user: {}", notification.getId(), userEmail);
-                emitter.send(SseEmitter.event()
-                        .id(notification.getId())
-                        .name("notification")
-                        .data(notification)
-                        .build());
 
-                log.info("✅ Notification {} sent to user {}", notification.getId(), userEmail);
+                // Convert to NotificationResponse with booking object
+                NotificationResponse notificationResponse = convertToNotificationResponse(notification);
+
+                if (notificationResponse != null) {
+                    emitter.send(SseEmitter.event()
+                            .id(notification.getId())
+                            .name("notification")
+                            .data(notificationResponse)
+                            .build());
+
+                    log.info("✅ Notification {} sent to user {} with booking details", notification.getId(), userEmail);
+                } else {
+                    log.warn("Booking not found for notification {}. Not sending to user {}", notification.getId(), userEmail);
+                }
             } catch (IOException e) {
                 log.warn("Failed to send notification {} to user {}: {}", notification.getId(), userEmail, e.getMessage());
                 // Remove the failed emitter
@@ -244,13 +253,21 @@ public class NotificationService {
                 for (Notification notification : pendingNotifications) {
                     try {
                         log.info("Sending pending notification {} to connected user {}", notification.getId(), userEmail);
-                        emitter.send(SseEmitter.event()
-                                .id(notification.getId())
-                                .name("notification")
-                                .data(notification)
-                                .build());
 
-                        log.info("✅ Pending notification {} sent to user {}", notification.getId(), userEmail);
+                        // Convert to NotificationResponse with booking object
+                        NotificationResponse notificationResponse = convertToNotificationResponse(notification);
+
+                        if (notificationResponse != null) {
+                            emitter.send(SseEmitter.event()
+                                    .id(notification.getId())
+                                    .name("notification")
+                                    .data(notificationResponse)
+                                    .build());
+
+                            log.info("✅ Pending notification {} sent to user {} with booking details", notification.getId(), userEmail);
+                        } else {
+                            log.warn("Booking not found for pending notification {}. Not sending to user {}", notification.getId(), userEmail);
+                        }
                     } catch (IOException e) {
                         log.warn("Failed to send pending notification {} to user {}: {}",
                                 notification.getId(), userEmail, e.getMessage());
@@ -266,19 +283,19 @@ public class NotificationService {
     }
 
     /**
-     * Convert a notification to NotificationResponse by fetching the associated booking
+     * Convert a notification to NotificationResponse by fetching the associated archived booking
      *
      * @param notification The notification to convert
-     * @return NotificationResponse with booking object, or null if booking not found
+     * @return NotificationResponse with archived booking object, or null if archived booking not found
      */
     public NotificationResponse convertToNotificationResponse(Notification notification) {
         try {
-            // Fetch the booking by booking ID
-            Booking booking = bookingService.getBookingById(notification.getBookingId());
-            return NotificationResponse.fromNotificationAndBooking(notification, booking);
+            // Fetch the archived booking by booking ID (cancelled bookings are in archive table)
+            ArchiveBooking archivedBooking = bookingService.getArchivedBookingById(notification.getBookingId());
+            return NotificationResponse.fromNotificationAndBooking(notification, archivedBooking);
         } catch (IllegalArgumentException e) {
-            log.warn("Booking not found for notification {}: {}", notification.getId(), e.getMessage());
-            // Return null if booking not found - controller will handle this
+            log.warn("Archived booking not found for notification {}: {}", notification.getId(), e.getMessage());
+            // Return null if archived booking not found - controller will handle this
             return null;
         } catch (Exception e) {
             log.error("Error converting notification {} to response: {}", notification.getId(), e.getMessage());

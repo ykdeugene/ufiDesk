@@ -4,8 +4,11 @@ spring:
 
   data:
     mongodb:
-      uri: mongodb://admin:admin123@localhost:27017/ufidesk?authSource=admin
+      uri: mongodb://admin:admin123@localhost:27017/ufidesk?authSource=admin&maxIdleTimeMS=900000&maxPoolSize=100&minPoolSize=10
       database: ufidesk
+      # Disable auto-index creation to prevent conflicts with existing indexes
+      # Indexes are managed explicitly or via migration scripts
+      auto-index-creation: false
 
   session:
     store-type: mongodb

@@ -94,13 +94,15 @@ public class AdminController {
                 log.info("✅ Password updated for user: {}", updateUserRequest.getEmail());
             }
 
-            // Update admin status
+            // Update admin status and role accordingly
             boolean previousAdmin = user.isAdmin();
             user.setAdmin(updateUserRequest.isAdmin());
+            user.setRole(updateUserRequest.isAdmin() ? "ADMIN" : "USER");
 
             if (previousAdmin != updateUserRequest.isAdmin()) {
-                log.info("Admin status changed for user {}: {} → {}",
-                        updateUserRequest.getEmail(), previousAdmin, updateUserRequest.isAdmin());
+                log.info("Admin status changed for user {}: {} → {}, role updated to: {}",
+                        updateUserRequest.getEmail(), previousAdmin, updateUserRequest.isAdmin(),
+                        updateUserRequest.isAdmin() ? "ADMIN" : "USER");
             }
 
             // Update active status

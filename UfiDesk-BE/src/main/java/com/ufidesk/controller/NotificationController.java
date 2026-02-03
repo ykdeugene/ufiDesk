@@ -63,6 +63,20 @@ public class NotificationController {
         notificationService.registerEmitter(userEmail, emitter);
         log.info("✅ SSE emitter registered for user: {}", userEmail);
 
+        try {
+            // Send connection established message
+            emitter.send(SseEmitter.event()
+                    .id("connection-" + System.currentTimeMillis())
+                    .name("connect")
+                    .data("Connected to notification stream")
+                    .build());
+            log.info("✅ Sent connection confirmation to user: {}", userEmail);
+        } catch (IOException e) {
+            log.warn("Failed to send connection confirmation to user {}: {}", userEmail, e.getMessage());
+            notificationService.removeEmitter(userEmail);
+            return emitter;
+        }
+
         // Send pending unnotified notifications
         List<Notification> pendingNotifications = notificationService.getUnnotifiedNotificationsByEmail(userEmail);
         log.info("Found {} pending notifications for user: {}", pendingNotifications.size(), userEmail);
@@ -90,6 +104,7 @@ public class NotificationController {
                 } catch (IOException e) {
                     log.warn("Failed to send notification to user {}: {}", userEmail, e.getMessage());
                     notificationService.removeEmitter(userEmail);
+                    return emitter;
                 }
             }
         } else {

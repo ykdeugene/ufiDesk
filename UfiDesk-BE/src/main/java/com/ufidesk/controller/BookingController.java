@@ -2,6 +2,7 @@ package com.ufidesk.controller;
 
 import com.ufidesk.dto.ApiResponse;
 import com.ufidesk.dto.CreateBookingRequest;
+import com.ufidesk.model.ArchiveBooking;
 import com.ufidesk.model.Booking;
 import com.ufidesk.service.BookingService;
 import lombok.RequiredArgsConstructor;
@@ -133,25 +134,25 @@ public class BookingController {
 
 
     /**
-     * Cancel a booking by setting its status to CANCELLED.
+     * Cancel a booking by archiving it and removing it from the bookings collection.
      *
      * Only the user who created the booking or an ADMIN/SUPERADMIN can cancel it.
      *
      * @param bookingId the booking ID to cancel
-     * @return success response with the cancelled booking
+     * @return success response with the archived booking
      */
     @PreAuthorize("isAuthenticated()")
     @DeleteMapping("/cancel-booking/{bookingId}")
-    public ResponseEntity<ApiResponse<Booking>> cancelBooking(@PathVariable String bookingId) {
-        log.info("Attempting to cancel booking: {}", bookingId);
+    public ResponseEntity<ApiResponse<ArchiveBooking>> cancelBooking(@PathVariable String bookingId) {
+        log.info("Attempting to cancel and archive booking: {}", bookingId);
 
         try {
-            Booking cancelledBooking = bookingService.cancelBooking(bookingId);
+            ArchiveBooking archivedBooking = bookingService.cancelBooking(bookingId);
 
-            log.info("✅ Successfully cancelled booking: {}", bookingId);
+            log.info("✅ Successfully cancelled and archived booking: {}", bookingId);
             return ResponseEntity.ok(ApiResponse.success(
-                    "Booking cancelled successfully",
-                    cancelledBooking
+                    "Booking cancelled and archived successfully",
+                    archivedBooking
             ));
         } catch (IllegalArgumentException e) {
             log.error("❌ Booking not found: {}", e.getMessage());
@@ -161,6 +162,110 @@ public class BookingController {
             log.error("❌ Error cancelling booking: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("Failed to cancel booking: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Delete a booking (alias for cancel-booking for backward compatibility).
+     * This endpoint delegates to cancelBooking().
+     *
+     * Only the user who created the booking or an ADMIN/SUPERADMIN can delete it.
+     *
+     * @param bookingId the booking ID to delete
+     * @return success response with the archived booking
+     */
+    @PreAuthorize("isAuthenticated()")
+    @DeleteMapping("/delete-booking/{bookingId}")
+    public ResponseEntity<ApiResponse<ArchiveBooking>> deleteBooking(@PathVariable String bookingId) {
+        log.info("Attempting to delete booking (via delete-booking endpoint): {}", bookingId);
+        // Delegate to cancelBooking method
+        return cancelBooking(bookingId);
+    }
+
+    // ===== Archive Booking Endpoints =====
+
+    /**
+     * Get all archived bookings.
+     *
+     * Only ADMIN/SUPERADMIN users can view archived bookings.
+     *
+     * @return success response with list of all archived bookings
+     */
+    @PreAuthorize("hasAuthority('ADMIN') or hasAuthority('SUPERADMIN')")
+    @GetMapping("/get-all-archived-bookings")
+    public ResponseEntity<ApiResponse<List<ArchiveBooking>>> getAllArchivedBookings() {
+        log.info("Fetching all archived bookings");
+
+        try {
+            List<ArchiveBooking> archivedBookings = bookingService.getAllArchivedBookings();
+
+            log.info("✅ Retrieved {} archived bookings", archivedBookings.size());
+            return ResponseEntity.ok(ApiResponse.success(
+                    "All archived bookings retrieved successfully",
+                    archivedBookings
+            ));
+        } catch (Exception e) {
+            log.error("❌ Error retrieving archived bookings: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to retrieve archived bookings: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Get archived bookings for the authenticated user.
+     *
+     * @return success response with list of archived bookings for the user
+     */
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/get-archived-bookings")
+    public ResponseEntity<ApiResponse<List<ArchiveBooking>>> getMyArchivedBookings() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userEmail = authentication.getName();
+
+        log.info("Fetching archived bookings for user: {}", userEmail);
+
+        try {
+            List<ArchiveBooking> archivedBookings = bookingService.getArchivedBookingsByUserEmail(userEmail);
+
+            log.info("✅ Retrieved {} archived bookings for user {}", archivedBookings.size(), userEmail);
+            return ResponseEntity.ok(ApiResponse.success(
+                    "Archived bookings retrieved successfully",
+                    archivedBookings
+            ));
+        } catch (Exception e) {
+            log.error("❌ Error retrieving archived bookings for user {}: {}", userEmail, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to retrieve archived bookings: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Get an archived booking by its ID.
+     *
+     * @param archivedBookingId the archived booking ID
+     * @return success response with the archived booking
+     */
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/get-archived-booking/{archivedBookingId}")
+    public ResponseEntity<ApiResponse<ArchiveBooking>> getArchivedBooking(@PathVariable String archivedBookingId) {
+        log.info("Fetching archived booking: {}", archivedBookingId);
+
+        try {
+            ArchiveBooking archivedBooking = bookingService.getArchivedBookingById(archivedBookingId);
+
+            log.info("✅ Retrieved archived booking: {}", archivedBookingId);
+            return ResponseEntity.ok(ApiResponse.success(
+                    "Archived booking retrieved successfully",
+                    archivedBooking
+            ));
+        } catch (IllegalArgumentException e) {
+            log.error("❌ Archived booking not found: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error("Archived booking not found: " + e.getMessage()));
+        } catch (Exception e) {
+            log.error("❌ Error retrieving archived booking: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to retrieve archived booking: " + e.getMessage()));
         }
     }
 }
